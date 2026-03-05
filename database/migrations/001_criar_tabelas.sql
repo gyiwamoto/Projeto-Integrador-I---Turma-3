@@ -1,0 +1,2 @@
+-- Migração 001: criação das tabelas
+-- TODO: definir schema completo após finalizar o DER
