@@ -27,7 +27,7 @@ Sistema de gerenciamento de consultório odontológico desenvolvido como Projeto
 
 ### Pré-requisitos
 
-- Node.js >= 24
+- Node.js ^24.x
 - npm >= 10
 
 ### Frontend

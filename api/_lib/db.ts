@@ -1,9 +1,11 @@
-import { Pool } from 'pg';
+import { neon } from '@neondatabase/serverless';
 
-// Conexão com o banco de dados PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+const databaseUrl = process.env.DATABASE_URL;
 
-export default pool;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL nao definida no ambiente.');
+}
+
+const sql = neon(databaseUrl);
+
+export default sql;
