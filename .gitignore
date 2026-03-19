@@ -11,7 +11,14 @@ api/dist/
 # Variáveis de ambiente
 .env
 .env.local
+.env.development
+.env.production
 .env.*.local
+.env.development
+api/.env
+api/.env.local
+api/.env.*.local
+api/.env.development
 
 # Arquivos de log
 npm-debug.log*
@@ -29,3 +36,5 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*.local
