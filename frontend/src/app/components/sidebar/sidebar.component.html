@@ -1,0 +1,13 @@
+<aside class="sidebar" aria-label="Menu principal">
+  <p class="sidebar__title">Navegacao</p>
+
+  <nav class="sidebar__nav">
+    @for (item of menuItems; track item.label) {
+    <a [routerLink]="item.route" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }"
+      class="sidebar__link">
+      <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+      <span>{{ item.label }}</span>
+    </a>
+    }
+  </nav>
+</aside>

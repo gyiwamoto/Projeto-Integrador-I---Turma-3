@@ -1,0 +1,14 @@
+<div class="admin-area" aria-label="Area administrativa">
+  @if (exibirRotulo) {
+  <span class="admin-area__label">{{ rotulo }}</span>
+  }
+
+
+  @if (temSessaoAtiva()) {
+  <button type="button" (click)="logout()" [disabled]="carregando">
+    {{ carregando ? 'Saindo...' : 'Logout' }}
+  </button>
+  } @else {
+  <button type="button" (click)="irParaLogin()" [disabled]="carregando">Login</button>
+  }
+</div>
