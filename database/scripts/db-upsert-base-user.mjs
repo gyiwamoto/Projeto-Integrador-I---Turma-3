@@ -133,8 +133,8 @@ async function run() {
     throw new Error('Senha do usuario base nao definida. Use --password ou BASE_USER_PASSWORD.');
   }
 
-  if (role !== 'admin' && role !== 'operador') {
-    throw new Error('Role invalida. Use admin ou operador.');
+  if (role !== 'admin' && role !== 'dentista' && role !== 'recepcionista') {
+    throw new Error('Role invalida. Use admin ou dentista ou recepcionista.');
   }
 
   const sql = neon(databaseUrl);
