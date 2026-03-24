@@ -2,7 +2,7 @@
   <p class="sidebar__title">Navegacao</p>
 
   <nav class="sidebar__nav">
-    @for (item of menuItems; track item.label) {
+    @for (item of menuItemsVisiveis; track item.label) {
     <a [routerLink]="item.route" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }"
       class="sidebar__link">
       <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
