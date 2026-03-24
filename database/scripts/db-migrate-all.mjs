@@ -107,6 +107,7 @@ async function run() {
   loadEnvFile(envFile);
 
   const databaseUrl = process.env.DATABASE_URL;
+  const dbTimeZone = process.env.DB_TIMEZONE || 'America/Sao_Paulo';
   if (!databaseUrl) {
     console.error('DATABASE_URL nao definido. Passe --env ou exporte a variavel no shell.');
     process.exit(1);
@@ -123,6 +124,7 @@ async function run() {
   const client = new Client({
     connectionString: databaseUrl,
     ssl: { rejectUnauthorized: false },
+    options: `-c timezone=${dbTimeZone}`,
   });
 
   try {
@@ -149,6 +151,25 @@ async function run() {
   } catch (error) {
     console.error('Falha ao aplicar migrations.');
     console.error(error);
+
+    if (error && typeof error === 'object' && 'code' in error) {
+      const pgCode = String(error.code || '');
+
+      if (pgCode === '28P01') {
+        console.error('Diagnostico: falha de autenticacao (usuario/senha invalidos).');
+        console.error('Verifique o DATABASE_URL no arquivo informado em --env (ex.: ../.env.development).');
+        console.error('Se a senha foi alterada no provedor (Neon), atualize a string de conexao.');
+      }
+
+      if (pgCode === '3D000') {
+        console.error('Diagnostico: banco de dados informado na URL nao existe.');
+      }
+
+      if (pgCode === '53300') {
+        console.error('Diagnostico: limite de conexoes atingido no servidor PostgreSQL.');
+      }
+    }
+
     process.exitCode = 1;
   } finally {
     await client.end();

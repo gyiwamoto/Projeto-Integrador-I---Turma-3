@@ -76,6 +76,7 @@ async function run() {
   loadEnvFile(envFile);
 
   const databaseUrl = process.env.DATABASE_URL;
+  const dbTimeZone = process.env.DB_TIMEZONE || 'America/Sao_Paulo';
   if (!databaseUrl) {
     console.error('DATABASE_URL nao definido. Passe --env ou exporte a variavel no shell.');
     process.exit(1);
@@ -92,6 +93,7 @@ async function run() {
   const client = new Client({
     connectionString: databaseUrl,
     ssl: { rejectUnauthorized: false },
+    options: `-c timezone=${dbTimeZone}`,
   });
 
   try {
