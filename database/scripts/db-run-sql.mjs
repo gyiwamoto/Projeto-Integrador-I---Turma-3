@@ -69,7 +69,7 @@ async function run() {
   const { sqlFile, envFile } = parseArgs(process.argv);
 
   if (!sqlFile) {
-    console.error('Uso: node ./scripts/db-run-sql.mjs <arquivo.sql> [--env ../.env.development]');
+    console.error('Uso: node ../database/scripts/db-run-sql.mjs <arquivo.sql> [--env ../.env.development]');
     process.exit(1);
   }
 

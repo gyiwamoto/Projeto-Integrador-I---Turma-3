@@ -2,13 +2,23 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
+    "moduleResolution": "node",
     "lib": ["ES2020"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "."
+    "baseUrl": ".",
+    "paths": {
+      "@vercel/node": ["./node_modules/@vercel/node"],
+      "@neondatabase/serverless": ["./node_modules/@neondatabase/serverless"],
+      "bcryptjs": ["./node_modules/bcryptjs"],
+      "jsonwebtoken": [
+        "./node_modules/@types/jsonwebtoken/index.d.ts",
+        "./node_modules/jsonwebtoken"
+      ]
+    }
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "../services/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

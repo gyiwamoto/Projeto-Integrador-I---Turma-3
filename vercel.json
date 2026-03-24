@@ -3,7 +3,25 @@
   "buildCommand": "npm run build --prefix frontend",
   "outputDirectory": "frontend/dist/dentista-organizado/browser",
   "functions": {
-    "api/**/*.ts": {
+    "api/auth/index.ts": {
+      "runtime": "@vercel/node@5.1.4"
+    },
+    "api/usuarios/index.ts": {
+      "runtime": "@vercel/node@5.1.4"
+    },
+    "api/pacientes/index.ts": {
+      "runtime": "@vercel/node@5.1.4"
+    },
+    "api/convenios/index.ts": {
+      "runtime": "@vercel/node@5.1.4"
+    },
+    "api/consultas/index.ts": {
+      "runtime": "@vercel/node@5.1.4"
+    },
+    "api/tratamentos/index.ts": {
+      "runtime": "@vercel/node@5.1.4"
+    },
+    "api/procedimentos-realizados/index.ts": {
       "runtime": "@vercel/node@5.1.4"
     }
   },

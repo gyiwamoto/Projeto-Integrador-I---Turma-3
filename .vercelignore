@@ -1,0 +1,10 @@
+# Keep tests and local tooling out of deployment bundle
+api/**/*.test.ts
+api/tests/**
+**/*.spec.ts
+**/__tests__/**
+
+# Local/editor files
+.vscode/**
+.git/**
+*.log

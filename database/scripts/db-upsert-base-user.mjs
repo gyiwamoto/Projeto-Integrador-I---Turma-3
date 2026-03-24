@@ -95,7 +95,7 @@ function loadEnvFile(envFilePath) {
 
 function printUsage() {
   console.log('Uso:');
-  console.log('  node ./scripts/db-upsert-base-user.mjs --env ../.env.development --email admin@dominio.com --password SenhaForte');
+  console.log('  node ../database/scripts/db-upsert-base-user.mjs --env ../.env.development --email admin@dominio.com --password SenhaForte');
   console.log('');
   console.log('Parametros opcionais:');
   console.log('  --name <nome>      (padrao: BASE_USER_NAME ou Administrador)');

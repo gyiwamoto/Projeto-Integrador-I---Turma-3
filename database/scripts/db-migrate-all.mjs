@@ -1,11 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Client } from 'pg';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function parseArgs(argv) {
   const args = {
     envFile: '',
-    migrationsDir: '../database/migrations',
   };
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -13,12 +16,6 @@ function parseArgs(argv) {
 
     if (token === '--env' && argv[i + 1]) {
       args.envFile = argv[i + 1];
-      i += 1;
-      continue;
-    }
-
-    if (token === '--dir' && argv[i + 1]) {
-      args.migrationsDir = argv[i + 1];
       i += 1;
     }
   }
@@ -105,7 +102,7 @@ async function applyMigration(client, filename, sql) {
 }
 
 async function run() {
-  const { envFile, migrationsDir } = parseArgs(process.argv);
+  const { envFile } = parseArgs(process.argv);
 
   loadEnvFile(envFile);
 
@@ -115,11 +112,11 @@ async function run() {
     process.exit(1);
   }
 
-  const absoluteMigrationsDir = path.resolve(process.cwd(), migrationsDir);
-  const allMigrations = listMigrationFiles(absoluteMigrationsDir);
+  const migrationsDir = path.join(__dirname, '..', 'migrations');
+  const allMigrations = listMigrationFiles(migrationsDir);
 
   if (allMigrations.length === 0) {
-    console.log(`Nenhuma migration encontrada em: ${absoluteMigrationsDir}`);
+    console.log(`Nenhuma migration encontrada em: ${migrationsDir}`);
     return;
   }
 
@@ -141,7 +138,7 @@ async function run() {
     }
 
     for (const filename of pendingMigrations) {
-      const sqlFilePath = path.join(absoluteMigrationsDir, filename);
+      const sqlFilePath = path.join(migrationsDir, filename);
       const sql = fs.readFileSync(sqlFilePath, 'utf8');
 
       console.log(`Aplicando migration: ${filename}`);
@@ -155,6 +152,7 @@ async function run() {
     process.exitCode = 1;
   } finally {
     await client.end();
+    process.exit(process.exitCode || 0);
   }
 }
 
