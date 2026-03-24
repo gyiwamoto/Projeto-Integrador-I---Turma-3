@@ -1,0 +1,62 @@
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e6ecf4;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+}
+
+.brand__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #123151;
+}
+
+.brand__subtitle {
+  font-size: 0.85rem;
+  color: #667b95;
+}
+
+.session-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.status-chip--checking {
+  color: #855e00;
+  background: #fff4d6;
+}
+
+.status-chip--ok {
+  color: #0b6b43;
+  background: #dbf5e8;
+}
+
+.status-chip--idle {
+  color: #49596d;
+  background: #edf2f8;
+}
+
+@media (max-width: 700px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

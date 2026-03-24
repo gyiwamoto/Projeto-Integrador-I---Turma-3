@@ -1,11 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Client } from 'pg';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function parseArgs(argv) {
   const args = {
     envFile: '',
-    migrationsDir: '../database/migrations',
   };
 
   for (let i = 2; i < argv.length; i += 1) {
@@ -13,12 +16,6 @@ function parseArgs(argv) {
 
     if (token === '--env' && argv[i + 1]) {
       args.envFile = argv[i + 1];
-      i += 1;
-      continue;
-    }
-
-    if (token === '--dir' && argv[i + 1]) {
-      args.migrationsDir = argv[i + 1];
       i += 1;
     }
   }
@@ -105,27 +102,29 @@ async function applyMigration(client, filename, sql) {
 }
 
 async function run() {
-  const { envFile, migrationsDir } = parseArgs(process.argv);
+  const { envFile } = parseArgs(process.argv);
 
   loadEnvFile(envFile);
 
   const databaseUrl = process.env.DATABASE_URL;
+  const dbTimeZone = process.env.DB_TIMEZONE || 'America/Sao_Paulo';
   if (!databaseUrl) {
     console.error('DATABASE_URL nao definido. Passe --env ou exporte a variavel no shell.');
     process.exit(1);
   }
 
-  const absoluteMigrationsDir = path.resolve(process.cwd(), migrationsDir);
-  const allMigrations = listMigrationFiles(absoluteMigrationsDir);
+  const migrationsDir = path.join(__dirname, '..', 'migrations');
+  const allMigrations = listMigrationFiles(migrationsDir);
 
   if (allMigrations.length === 0) {
-    console.log(`Nenhuma migration encontrada em: ${absoluteMigrationsDir}`);
+    console.log(`Nenhuma migration encontrada em: ${migrationsDir}`);
     return;
   }
 
   const client = new Client({
     connectionString: databaseUrl,
     ssl: { rejectUnauthorized: false },
+    options: `-c timezone=${dbTimeZone}`,
   });
 
   try {
@@ -141,7 +140,7 @@ async function run() {
     }
 
     for (const filename of pendingMigrations) {
-      const sqlFilePath = path.join(absoluteMigrationsDir, filename);
+      const sqlFilePath = path.join(migrationsDir, filename);
       const sql = fs.readFileSync(sqlFilePath, 'utf8');
 
       console.log(`Aplicando migration: ${filename}`);
@@ -152,9 +151,29 @@ async function run() {
   } catch (error) {
     console.error('Falha ao aplicar migrations.');
     console.error(error);
+
+    if (error && typeof error === 'object' && 'code' in error) {
+      const pgCode = String(error.code || '');
+
+      if (pgCode === '28P01') {
+        console.error('Diagnostico: falha de autenticacao (usuario/senha invalidos).');
+        console.error('Verifique o DATABASE_URL no arquivo informado em --env (ex.: ../.env.development).');
+        console.error('Se a senha foi alterada no provedor (Neon), atualize a string de conexao.');
+      }
+
+      if (pgCode === '3D000') {
+        console.error('Diagnostico: banco de dados informado na URL nao existe.');
+      }
+
+      if (pgCode === '53300') {
+        console.error('Diagnostico: limite de conexoes atingido no servidor PostgreSQL.');
+      }
+    }
+
     process.exitCode = 1;
   } finally {
     await client.end();
+    process.exit(process.exitCode || 0);
   }
 }
 

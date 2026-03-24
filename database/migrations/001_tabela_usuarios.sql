@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 	nome VARCHAR(120) NOT NULL,
 	email VARCHAR(160) NOT NULL UNIQUE,
 	senha_hash TEXT NOT NULL,
-	tipo_usuario VARCHAR(20) NOT NULL CHECK (tipo_usuario IN ('admin', 'operador')),
+	tipo_usuario VARCHAR(20) NOT NULL CHECK (tipo_usuario IN ('admin', 'dentista', 'recepcionista')),
 	ativo BOOLEAN NOT NULL DEFAULT TRUE,
 	criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 	atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()

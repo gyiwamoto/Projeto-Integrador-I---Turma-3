@@ -1,0 +1,16 @@
+<header class="app-header">
+  <a class="brand" routerLink="/">
+    <span class="brand__title">{{ titulo }}</span>
+    <span class="brand__subtitle">{{ subtitulo }}</span>
+  </a>
+
+  <div class="session-status" aria-live="polite">
+    @if (verificandoSessao) {
+    <span class="status-chip status-chip--checking">Verificando sessao...</span>
+    } @else if (sessaoAtiva) {
+    <span class="status-chip status-chip--ok">Sessao ativa</span>
+    } @else {
+    <span class="status-chip status-chip--idle">Sessao inativa</span>
+    }
+  </div>
+</header>

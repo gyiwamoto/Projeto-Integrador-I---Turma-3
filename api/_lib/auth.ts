@@ -9,8 +9,9 @@ if (!jwtSecret) {
 }
 
 // Configuracao do emissor do token e tempo de expiracao
-const jwtIssuer = 'doces-delicia-api';
+const jwtIssuer = 'dentista-organizado-api';
 const jwtExpiresIn = (process.env.JWT_EXPIRES_IN ?? '8h') as SignOptions['expiresIn'];
+const authCookieName = process.env.AUTH_COOKIE_NAME ?? 'dentista_organizado_session';
 
 export class AuthError extends Error {
   statusCode: number;
@@ -23,7 +24,7 @@ export class AuthError extends Error {
 }
 
 function isTipoUsuario(value: unknown): value is TipoUsuario {
-  return value === 'admin' || value === 'operador';
+  return value === 'admin' || value === 'dentista' || value === 'recepcionista';
 }
 
 /**
@@ -58,6 +59,71 @@ export function extrairBearerToken(authorizationHeader: string | undefined): str
   return token;
 }
 
+function parseDuracaoParaSegundos(value: string): number {
+  const valor = value.trim();
+  const regex = /^(\d+)([smhd])$/i;
+  const match = valor.match(regex);
+
+  if (!match) {
+    return 8 * 60 * 60;
+  }
+
+  const quantidade = Number(match[1]);
+  const unidade = match[2].toLowerCase();
+
+  if (!Number.isFinite(quantidade) || quantidade <= 0) {
+    return 8 * 60 * 60;
+  }
+
+  if (unidade === 's') return quantidade;
+  if (unidade === 'm') return quantidade * 60;
+  if (unidade === 'h') return quantidade * 60 * 60;
+
+  return quantidade * 60 * 60 * 24;
+}
+
+function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+  if (!cookieHeader) {
+    return {};
+  }
+
+  return cookieHeader.split(';').reduce<Record<string, string>>((acc, item) => {
+    const [rawKey, ...rest] = item.split('=');
+    const key = rawKey?.trim();
+    const value = rest.join('=').trim();
+
+    if (!key) {
+      return acc;
+    }
+
+    acc[key] = decodeURIComponent(value);
+    return acc;
+  }, {});
+}
+
+function extrairTokenDoCookie(cookieHeader: string | undefined): string {
+  const cookies = parseCookies(cookieHeader);
+  const token = cookies[authCookieName];
+
+  if (!token) {
+    throw new AuthError('Token nao enviado.');
+  }
+
+  return token;
+}
+
+export function criarCookieSessao(token: string): string {
+  const maxAge = parseDuracaoParaSegundos(String(jwtExpiresIn));
+  const secureFlag = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+
+  return `${authCookieName}=${encodeURIComponent(token)}; Max-Age=${maxAge}; Path=/; HttpOnly; SameSite=Lax${secureFlag}`;
+}
+
+export function criarCookieSessaoEncerrada(): string {
+  const secureFlag = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  return `${authCookieName}=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; HttpOnly; SameSite=Lax${secureFlag}`;
+}
+
 export function verificarAccessToken(token: string): JwtUsuarioPayload {
   let decoded: string | JwtPayload;
 
@@ -90,7 +156,10 @@ export function verificarAccessToken(token: string): JwtUsuarioPayload {
 }
 
 export function autenticarRequisicao(req: VercelRequest): JwtUsuarioPayload {
-  const token = extrairBearerToken(req.headers.authorization);
+  const token = req.headers.authorization
+    ? extrairBearerToken(req.headers.authorization)
+    : extrairTokenDoCookie(req.headers.cookie);
+
   return verificarAccessToken(token);
 }
 
@@ -103,10 +172,16 @@ export function verificarAdminAutorizado(usuario: JwtUsuarioPayload): void {
 
 export function verificarPermissaoAcesso(usuario: JwtUsuarioPayload, usuarioIdSolicitado: number): void {
   if (usuario.tipo_usuario === 'admin') {
-    return; 
+    return;
   }
 
   if (usuario.id !== usuarioIdSolicitado) {
     throw new AuthError('Acesso Restrito a Administradores.', 403);
+  }
+}
+
+export function verificarPermissaoDeletar(usuario: JwtUsuarioPayload): void {
+  if (usuario.tipo_usuario !== 'admin') {
+    throw new AuthError('Apenas administradores podem deletar dados.', 403);
   }
 }
