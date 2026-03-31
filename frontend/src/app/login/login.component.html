@@ -1,0 +1,64 @@
+<div class="page">
+  <div class="card">
+
+    <!-- Logo -->
+    <div class="logo-wrap">
+      <img src="logo.png" alt="Sousa Iwamoto Odontologia" class="logo" />
+    </div>
+
+    <!-- Formulário -->
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+      <div class="field" [class.error]="usuario.invalid && usuario.touched">
+        <label for="usuario">Usuário:</label>
+        <input
+          id="usuario"
+          type="text"
+          formControlName="usuario"
+          placeholder=""
+          autocomplete="username"
+        />
+        <span class="hint" *ngIf="usuario.errors?.['required'] && usuario.touched">
+          Campo obrigatório.
+        </span>
+      </div>
+
+      <div class="field" [class.error]="senha.invalid && senha.touched">
+        <label for="senha">Senha:</label>
+        <div class="pw-wrap">
+          <input
+            id="senha"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="senha"
+            placeholder=""
+            autocomplete="current-password"
+          />
+          <button type="button" class="toggle-pw" (click)="togglePassword()" tabindex="-1">
+            <svg *ngIf="!showPassword()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg *ngIf="showPassword()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </button>
+        </div>
+        <span class="hint" *ngIf="senha.errors?.['required'] && senha.touched">Campo obrigatório.</span>
+        <span class="hint" *ngIf="senha.errors?.['minlength'] && senha.touched">Mínimo de 6 caracteres.</span>
+      </div>
+
+      <div class="error-global" *ngIf="errorMsg()">
+        {{ errorMsg() }}
+      </div>
+
+      <button type="submit" class="btn-submit" [disabled]="loading()">
+        <span *ngIf="!loading()">Entrar</span>
+        <span *ngIf="loading()" class="spinner"></span>
+      </button>
+
+    </form>
+
+    <p class="tagline">SORRIA,<br>TENHA UM EXCELENTE<br>DIA!</p>
+
+  </div>
+</div>

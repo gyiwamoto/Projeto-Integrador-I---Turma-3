@@ -1,0 +1,68 @@
+<div class="page">
+  <div class="container">
+
+    <div class="top-bar">
+      <button class="back-btn" (click)="voltar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Voltar
+      </button>
+      <h2 class="titulo">AGENDA {{ nomeDoutora }}</h2>
+    </div>
+
+    <!-- Busca -->
+    <div class="busca-wrap">
+      <svg class="busca-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        class="busca-input"
+        type="text"
+        placeholder="Buscar por nome, CPF, celular..."
+        [(ngModel)]="termoBusca"
+      />
+      <button class="busca-clear" *ngIf="termoBusca" (click)="termoBusca = ''">✕</button>
+    </div>
+
+    <!-- Tabela -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>DATA</th>
+            <th>ID*</th>
+            <th>NOME</th>
+            <th>SOBRENOME</th>
+            <th>WHATSAPP*</th>
+            <th>EMAIL</th>
+            <th>ENVIOU AVISO?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of pacientesFiltrados">
+            <td>{{ p.data }}</td>
+            <td>{{ p.id }}</td>
+            <td>{{ p.nome }}</td>
+            <td>{{ p.sobrenome }}</td>
+            <td>{{ p.whatsapp }}</td>
+            <td>{{ p.email }}</td>
+            <td>
+              <span class="aviso-badge" [class.sim]="p.avisoEnviado" [class.nao]="!p.avisoEnviado">
+                {{ p.avisoEnviado ? 'SIM' : 'NÃO' }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="pacientesFiltrados.length === 0">
+            <td colspan="7" class="vazio">Nenhum paciente encontrado.</td>
+          </tr>
+          <!-- Linhas vazias para preencher a tabela -->
+          <tr *ngFor="let i of linhasVazias" class="linha-vazia">
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>

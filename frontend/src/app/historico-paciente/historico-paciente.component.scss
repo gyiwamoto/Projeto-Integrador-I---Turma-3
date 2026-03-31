@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
+
+$blue:      #3a9fd6;
+$blue-dark: #1a6fa8;
+$blue-pale: #e8f4fc;
+$text:      #1a2e42;
+$muted:     #8aabcc;
+$border:    #cce0f0;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.page {
+  min-height: 100vh;
+  background: #e8eef3;
+  display: flex;
+  justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+  padding: 1.5rem 1rem;
+}
+
+.container { width: 100%; max-width: 1200px; }
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  border: 1.5px solid $border;
+  border-radius: 50px;
+  padding: 0.4rem 0.9rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: $blue-dark;
+  cursor: pointer;
+  flex-shrink: 0;
+  svg { width: 16px; height: 16px; }
+  &:hover { background: $blue-pale; }
+}
+
+.titulo {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: $text;
+  letter-spacing: 0.02em;
+}
+
+.table-wrap {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(42,122,184,0.08);
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+
+  th {
+    background: $blue;
+    color: white;
+    font-weight: 500;
+    padding: 0.55rem 0.6rem;
+    text-align: left;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.55rem 0.6rem;
+    border-bottom: 0.5px solid $border;
+    color: $text;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover:not(.linha-vazia) td { background: $blue-pale; }
+  .linha-vazia td { height: 34px; }
+  .vazio { text-align: center; color: $muted; padding: 2rem; font-size: 0.9rem; }
+}
+
+.rodape {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: $muted;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}

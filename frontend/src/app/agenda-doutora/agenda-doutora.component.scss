@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
+
+$blue:      #3a9fd6;
+$blue-dark: #1a6fa8;
+$blue-pale: #e8f4fc;
+$text:      #1a2e42;
+$muted:     #8aabcc;
+$border:    #cce0f0;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.page {
+  min-height: 100vh;
+  background: #e8eef3;
+  display: flex;
+  justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+  padding: 1.5rem 1rem;
+}
+
+.container {
+  width: 100%;
+  max-width: 760px;
+}
+
+// ── Top bar ───────────────────────────────────────────────────────────────
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  border: 1.5px solid $border;
+  border-radius: 50px;
+  padding: 0.4rem 0.9rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: $blue-dark;
+  cursor: pointer;
+  transition: background 0.2s;
+  svg { width: 16px; height: 16px; }
+  &:hover { background: $blue-pale; }
+}
+
+.titulo {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: $text;
+  letter-spacing: 0.03em;
+}
+
+// ── Busca ─────────────────────────────────────────────────────────────────
+.busca-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  background: white;
+  border: 1.5px solid $border;
+  border-radius: 50px;
+  padding: 0 1rem;
+  transition: border-color 0.2s;
+
+  &:focus-within { border-color: $blue; }
+
+  .busca-icon {
+    width: 18px; height: 18px;
+    color: $muted;
+    flex-shrink: 0;
+  }
+}
+
+.busca-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0.7rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: 'DM Sans', sans-serif;
+  color: $text;
+  background: transparent;
+  &::placeholder { color: $muted; }
+}
+
+.busca-clear {
+  background: none;
+  border: none;
+  color: $muted;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  &:hover { color: $text; }
+}
+
+// ── Tabela ────────────────────────────────────────────────────────────────
+.table-wrap {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(42,122,184,0.08);
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+
+  th {
+    background: $blue;
+    color: white;
+    font-weight: 500;
+    padding: 0.65rem 0.75rem;
+    text-align: left;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 0.5px solid $border;
+    color: $text;
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr:hover:not(.linha-vazia) td { background: $blue-pale; }
+
+  .linha-vazia td { height: 36px; }
+
+  .vazio {
+    text-align: center;
+    color: $muted;
+    padding: 2rem;
+    font-size: 0.9rem;
+  }
+}
+
+.aviso-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 500;
+
+  &.sim { background: #e8f8f0; color: #2e7d52; }
+  &.nao { background: #fdf0f0; color: #c0392b; }
+}
