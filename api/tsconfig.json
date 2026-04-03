@@ -1,23 +1,15 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
     "moduleResolution": "node",
+    "ignoreDeprecations": "5.0",
     "lib": ["ES2020"],
-    "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "rootDir": "..",
     "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "@vercel/node": ["./node_modules/@vercel/node"],
-      "@neondatabase/serverless": ["./node_modules/@neondatabase/serverless"],
-      "bcryptjs": ["./node_modules/bcryptjs"],
-      "jsonwebtoken": [
-        "./node_modules/@types/jsonwebtoken/index.d.ts",
-        "./node_modules/jsonwebtoken"
-      ]
-    }
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo.api.json"
   },
   "include": ["./**/*.ts", "../services/**/*.ts"],
   "exclude": ["node_modules", "dist"]

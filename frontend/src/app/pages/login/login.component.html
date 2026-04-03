@@ -1,0 +1,62 @@
+<div class="page">
+  <section class="login-card" aria-label="Acesso ao sistema">
+    <div class="hero">
+      <div class="logo-wrap">
+        <img src="logo.png" alt="Sousa Iwamoto Odontologia" class="logo" />
+      </div>
+
+      <p class="card__eyebrow">Dentista Organizado</p>
+      <h1 class="brand-name">Sousa Iwamoto</h1>
+      <p class="hero__text">Bem-vindo(a) ao painel da clinica.</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <div class="card__intro">
+        <p class="card__eyebrow card__eyebrow--small">Acesso restrito</p>
+        <p>Entre com seu e-mail e senha para continuar.</p>
+      </div>
+
+      <div class="field" [class.error]="email.invalid && email.touched">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" formControlName="email" placeholder="voce@clinica.com" autocomplete="email" />
+        <span class="hint" *ngIf="email.errors?.['required'] && email.touched">
+          Campo obrigatório.
+        </span>
+        <span class="hint" *ngIf="email.errors?.['email'] && email.touched">
+          Informe um e-mail válido.
+        </span>
+      </div>
+
+      <div class="field" [class.error]="senha.invalid && senha.touched">
+        <label for="senha">Senha</label>
+        <div class="pw-wrap">
+          <input id="senha" [type]="showPassword() ? 'text' : 'password'" formControlName="senha" placeholder=""
+            autocomplete="current-password" />
+          <button type="button" class="toggle-pw" (click)="togglePassword()" tabindex="-1"
+            aria-label="Alternar visibilidade da senha">
+            <svg *ngIf="!showPassword()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg *ngIf="showPassword()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path
+                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+              <line x1="1" y1="1" x2="23" y2="23" />
+            </svg>
+          </button>
+        </div>
+        <span class="hint" *ngIf="senha.errors?.['required'] && senha.touched">Campo obrigatório.</span>
+        <span class="hint" *ngIf="senha.errors?.['minlength'] && senha.touched">Mínimo de 6 caracteres.</span>
+      </div>
+
+      <div class="error-global" *ngIf="errorMsg()">
+        {{ errorMsg() }}
+      </div>
+
+      <button type="submit" class="btn-submit" [disabled]="loading()">
+        <span *ngIf="!loading()">Entrar</span>
+        <span *ngIf="loading()" class="spinner"></span>
+      </button>
+    </form>
+  </section>
+</div>

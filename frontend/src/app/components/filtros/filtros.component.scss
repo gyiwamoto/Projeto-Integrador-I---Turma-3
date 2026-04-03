@@ -1,0 +1,75 @@
+:host {
+  display: block;
+}
+
+.filtros {
+  padding: 1rem;
+  border: 1px solid rgba(20, 48, 74, 0.12);
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
+.filtros__header h3 {
+  margin: 0 0 0.8rem;
+  font-size: 1rem;
+  color: #17324d;
+}
+
+.filtros__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.8rem;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+
+  span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #415d77;
+  }
+}
+
+input,
+select {
+  border: 1px solid rgba(20, 48, 74, 0.15);
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  color: #17324d;
+  background: #fff;
+
+  &:focus {
+    outline: none;
+    border-color: #2f7ca1;
+    box-shadow: 0 0 0 3px rgba(47, 124, 161, 0.14);
+  }
+}
+
+.filtros__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.primary-action,
+.secondary-action {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.6rem 0.95rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.primary-action {
+  color: #fff;
+  background: linear-gradient(135deg, #1f6f8d, #224b78);
+}
+
+.secondary-action {
+  background: rgba(31, 111, 141, 0.1);
+  color: #17324d;
+}

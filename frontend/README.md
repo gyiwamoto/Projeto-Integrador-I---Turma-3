@@ -1,59 +1,66 @@
-# DentistaOrganizado
+# Frontend - Dentista Organizado
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.1.
+Aplicacao Angular do projeto, com autenticacao, dashboard e modulos clinicos.
 
-## Development server
+## Status atual
 
-To start a local development server, run:
+- Versao: `1.0.0`
+- Paginas implementadas: dashboard, login, agenda, consultas, pacientes, convenios, tratamentos, usuarios e minha conta.
+- Componentes reutilizaveis com testes funcionais: filtros, modal, sidebar, tabela, toast-container e agenda-calendario.
+- Resultado da ultima execucao de testes: `205 passed (205)` em `2026-04-03`.
 
-```bash
-ng serve
-```
+## Requisitos
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- Node.js 22.x
+- npm 10.x
 
-## Code scaffolding
+## Scripts
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- `npm run start`: inicia o Angular sem proxy.
+- `npm run start:proxy`: inicia o Angular com proxy para a API local.
+- `npm run build`: build de producao.
+- `npm run watch`: build em modo watch.
+- `npm run test`: executa testes.
 
-```bash
-ng generate component component-name
-```
+## Escopo de testes funcionais
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Atualmente existem testes funcionais para:
 
-```bash
-ng generate --help
-```
+- Componentes compartilhados
+- Guards e servicos principais
+- Todas as paginas em `src/app/pages/*`
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Comando recomendado para CI/local:
 
 ```bash
-ng test
+npm test -- --watch=false
 ```
 
-## Running end-to-end tests
+## Desenvolvimento local
 
-For end-to-end (e2e) testing, run:
+Executando apenas o frontend:
 
 ```bash
-ng e2e
+npm install
+npm run start:proxy -- --port 4200
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Com isso, chamadas para `/api/*` sao encaminhadas para `http://localhost:3000` por meio de `proxy.conf.json`.
 
-## Additional Resources
+## Notas funcionais recentes
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Tela de pacientes alinhada ao schema do banco (`pacientes`):
+  - `codigo_paciente` e exibido como somente leitura e gerado no backend.
+  - formulario envia apenas campos aceitos pelo backend (`nome`, `data_nascimento`, `telefone`, `whatsapp_push`, `email`, `convenio_id`, `numero_carteirinha`).
+- Tela Minha Conta passou a exibir "Meus agendamentos" para `dentista` e `admin`.
+
+## Fluxo recomendado (workspace)
+
+Na raiz do repositorio:
+
+```bash
+npm run install-all
+npm run dev
+```
+
+Esse fluxo sobe frontend e API em paralelo com as portas padrao do projeto.

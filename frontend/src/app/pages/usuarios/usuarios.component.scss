@@ -1,0 +1,156 @@
+:host {
+  display: block;
+}
+
+.usuarios-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.primary-action,
+.secondary-action,
+.danger-action {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.72rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-action {
+  color: #fff;
+  background: linear-gradient(135deg, #1f6f8d, #224b78);
+}
+
+.secondary-action {
+  background: rgba(31, 111, 141, 0.08);
+  color: #17324d;
+}
+
+.danger-action {
+  background: linear-gradient(135deg, #bb3e3e, #8e2727);
+  color: #fff;
+}
+
+.feedback {
+  margin: 0;
+  border-radius: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(31, 111, 141, 0.08);
+  color: #17324d;
+}
+
+.feedback--erro {
+  background: #fceceb;
+  color: #8d2f2f;
+}
+
+.feedback--sucesso {
+  background: #ebf8ef;
+  color: #1f6a3f;
+}
+
+.usuarios-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(18, 34, 54, 0.08);
+  box-shadow: 0 12px 30px rgba(12, 28, 46, 0.05);
+
+  h1 {
+    margin: 0 0 0.3rem;
+    font-size: 1.5rem;
+    color: #17324d;
+  }
+
+  p {
+    margin: 0;
+    color: #5f7488;
+    line-height: 1.6;
+  }
+}
+
+.usuario-form {
+  display: grid;
+  gap: 0.85rem;
+
+  label {
+    display: grid;
+    gap: 0.35rem;
+    color: #17324d;
+    font-weight: 600;
+  }
+
+  input,
+  select {
+    width: 100%;
+    border: 1px solid rgba(18, 34, 54, 0.14);
+    border-radius: 0.7rem;
+    padding: 0.7rem 0.8rem;
+    font: inherit;
+    color: #17324d;
+    background: #fff;
+    outline: none;
+
+    &:focus {
+      border-color: #3b88af;
+      box-shadow: 0 0 0 3px rgba(59, 136, 175, 0.14);
+    }
+  }
+
+  small {
+    color: #b13b3b;
+    font-weight: 500;
+  }
+}
+
+.confirmacao-exclusao {
+  display: grid;
+  gap: 1rem;
+
+  p {
+    margin: 0;
+    color: #17324d;
+    line-height: 1.6;
+  }
+}
+
+.confirmacao-exclusao__acoes {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.usuarios-page__eyebrow {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6d8399;
+}
+
+.admin-badge {
+  align-self: flex-start;
+  padding: 0.7rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(31, 111, 141, 0.08);
+  color: #17324d;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .usuarios-page__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .confirmacao-exclusao__acoes {
+    flex-direction: column;
+  }
+}

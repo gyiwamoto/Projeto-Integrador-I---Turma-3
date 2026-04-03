@@ -2,6 +2,19 @@
 
 Sistema de gerenciamento de consultório odontológico desenvolvido como Projeto Integrador I — UNIVESP, Turma 3, Grupo 3.
 
+## Status do projeto (parcial)
+
+- Versao atual: `1.0.0`
+- Modulos ativos: autenticacao, dashboard, agenda, pacientes, consultas, convenios, tratamentos, usuarios e minha conta.
+- Backend com rotas principais de CRUD e validacao de sessao.
+- Banco com migrations versionadas de `001` ate `009`.
+- Testes frontend executados em 2026-04-03: `205 passed (205)`.
+
+Documentos de acompanhamento:
+
+- Relatorio parcial: `docs/relatorioParcial.md`
+- Atividades restantes do time: `tasks.md`
+
 ## Tecnologias
 
 | Camada       | Tecnologia                          |
@@ -31,12 +44,25 @@ Sistema de gerenciamento de consultório odontológico desenvolvido como Projeto
 - Node.js >= 22
 - npm >= 10
 
+### Workspace (recomendado)
+
+```bash
+npm run install-all
+npm run dev
+```
+
+Fluxo esperado:
+
+- Frontend: `http://localhost:4200`
+- API local: `http://localhost:3000`
+- Frontend consumindo backend por `/api/*` via proxy Angular.
+
 ### Frontend
 
 ```bash
 cd frontend
 npm install
-npm start
+npm run start:proxy -- --port 4200
 ```
 
 Acesse `http://localhost:4200`.
@@ -52,11 +78,31 @@ cd ../database
 npm install
 cd ../api
 
-# Iniciar servidor local
-vercel dev
+# Iniciar servidor local (porta 3000)
+vercel dev --listen 3000
 ```
 
 As funções ficam disponíveis em `http://localhost:3000/api/*`.
+
+## Scripts da raiz
+
+- `npm run install-all`: instala dependencias da raiz, `api`, `database` e `frontend`.
+- `npm run dev`: sobe API e frontend em paralelo.
+- `npm run dev:api`: sobe Vercel local em `3000` com `.env.development`.
+- `npm run dev:web`: sobe Angular em `4200` com proxy.
+
+### Qualidade do frontend
+
+```bash
+cd frontend
+npm test -- --watch=false
+npm run type-check
+```
+
+Resultado mais recente da suite de testes frontend:
+
+- `19` arquivos de teste
+- `205` testes passando
 
 ### Qualidade da API
 
@@ -106,9 +152,20 @@ O arquivo `vercel.json` na raiz ja define o fluxo de deploy para o monorepo:
 - `PUT /api/pacientes?id=<id>`: editar paciente
 - `DELETE /api/pacientes?id=<id>`: remover paciente
 - `GET /api/convenios`: listar convenios
+- `POST /api/convenios`: criar convenio
+- `PUT /api/convenios?id=<id>`: editar convenio
+- `DELETE /api/convenios?id=<id>`: remover convenio
 - `GET /api/consultas`: listar consultas
 - `GET /api/tratamentos`: listar tratamentos
+- `POST /api/tratamentos`: criar tratamento
+- `PUT /api/tratamentos?id=<id>`: editar tratamento
+- `DELETE /api/tratamentos?id=<id>`: remover tratamento
 - `GET /api/procedimentos-realizados`: listar procedimentos realizados
+
+### Observacao importante sobre pacientes
+
+- `codigo_paciente` e gerado automaticamente no servidor (migration `009_codigo_paciente_autoincremento.sql`).
+- O frontend nao deve enviar `codigo_paciente` no `POST /api/pacientes`.
 
 No painel da Vercel, configure o projeto com:
 

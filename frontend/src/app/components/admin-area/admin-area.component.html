@@ -5,6 +5,12 @@
 
 
   @if (temSessaoAtiva()) {
+  @if (!estaNaAreaAdministrativa()) {
+  <button type="button" class="admin-area__usuario" (click)="irParaDashboard()" [disabled]="carregando">
+    {{ obterIdentificacaoUsuario() }}
+  </button>
+  }
+
   <button type="button" (click)="logout()" [disabled]="carregando">
     {{ carregando ? 'Saindo...' : 'Logout' }}
   </button>

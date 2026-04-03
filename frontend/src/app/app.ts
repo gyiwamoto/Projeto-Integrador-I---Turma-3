@@ -1,11 +1,10 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { HeaderComponent } from './components/header/header.component';
-import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { ToastContainerComponent } from './components/toast-container/toast-container.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, HeaderComponent, SidebarComponent],
+  imports: [RouterOutlet, ToastContainerComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

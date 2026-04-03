@@ -90,7 +90,7 @@ function validarEntradaCriacao(body: CriarUsuarioBody): CriarUsuarioInput {
 
 export async function listarUsuarios(req: VercelRequest, res: VercelResponse) {
   try {
-    const usuarioLogado = autenticarRequisicao(req);
+    const usuarioLogado = await autenticarRequisicao(req);
     verificarAdminAutorizado(usuarioLogado);
   } catch (error) {
     if (error instanceof AuthError) {
@@ -116,7 +116,7 @@ export async function obterUsuarioPorId(req: VercelRequest, res: VercelResponse)
 
     let usuarioLogado: JwtUsuarioPayload;
     try {
-      usuarioLogado = autenticarRequisicao(req);
+      usuarioLogado = await autenticarRequisicao(req);
     } catch (error) {
       if (error instanceof AuthError) {
         return res.status(error.statusCode).json({ erro: error.message });
@@ -153,7 +153,7 @@ export async function obterUsuarioPorId(req: VercelRequest, res: VercelResponse)
 
 export async function criarUsuario(req: VercelRequest, res: VercelResponse) {
   try {
-    const usuarioLogado = autenticarRequisicao(req);
+    const usuarioLogado = await autenticarRequisicao(req);
     verificarAdminAutorizado(usuarioLogado);
   } catch (error) {
     if (error instanceof AuthError) {
@@ -206,7 +206,7 @@ export async function editarUsuario(req: VercelRequest, res: VercelResponse) {
 
     let usuarioLogado: JwtUsuarioPayload;
     try {
-      usuarioLogado = autenticarRequisicao(req);
+      usuarioLogado = await autenticarRequisicao(req);
     } catch (error) {
       if (error instanceof AuthError) {
         return res.status(error.statusCode).json({ erro: error.message });
@@ -304,7 +304,7 @@ export async function deletarUsuario(req: VercelRequest, res: VercelResponse) {
 
     let usuarioLogado: JwtUsuarioPayload;
     try {
-      usuarioLogado = autenticarRequisicao(req);
+      usuarioLogado = await autenticarRequisicao(req);
     } catch (error) {
       if (error instanceof AuthError) {
         return res.status(error.statusCode).json({ erro: error.message });

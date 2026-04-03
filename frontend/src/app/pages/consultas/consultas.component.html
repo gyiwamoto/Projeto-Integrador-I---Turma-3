@@ -1,0 +1,18 @@
+<section class="consultas-page">
+  <div class="consultas-page__header">
+    <div>
+      <p class="consultas-page__eyebrow">Atendimento</p>
+      <h1>Consultas</h1>
+      <p>Visualize e filtre as consultas registradas pela clinica.</p>
+    </div>
+  </div>
+
+  <app-filtros [titulo]="'Filtrar consultas'" [campos]="camposFiltro"
+    (filtrosChange)="onFiltrosChange($event)"></app-filtros>
+
+  <app-tabela [colunas]="colunas" [linhas]="linhasFiltradas"
+    mensagemSemDados="Nenhuma consulta encontrada para os filtros aplicados." [carregando]="carregando"
+    mensagemCarregando="Carregando consultas..." [mostrarColunaEditar]="false"
+    [mostrarColunaExcluir]="false"></app-tabela>
+
+</section>

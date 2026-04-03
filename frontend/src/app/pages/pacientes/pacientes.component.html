@@ -1,0 +1,100 @@
+<section class="pacientes-page">
+  <div class="pacientes-page__header">
+    <div>
+      <p class="pacientes-page__eyebrow">Pacientes</p>
+      <h1>Cadastro de pacientes</h1>
+      <p>Campos alinhados ao banco: codigo gerado no servidor, dados de contato e convenio.</p>
+    </div>
+  </div>
+
+  <app-filtros [titulo]="'Filtrar pacientes'" [campos]="camposFiltro" [acoes]="acoesFiltro" [labelCancelar]="'Limpar'"
+    (filtrosChange)="onFiltrosChange($event)" (acaoCustomizada)="onAcaoFiltro($event)"></app-filtros>
+
+  <app-tabela [colunas]="colunasTabela" [linhas]="linhasTabelaPacientes" mensagemSemDados="Nenhum paciente encontrado."
+    rotuloEditar="Visualizar" [acaoEditar]="acaoVisualizarPaciente" [acaoExcluir]="acaoExcluirPaciente"
+    [mostrarColunaExcluir]="true" rotuloExcluir="Excluir"></app-tabela>
+</section>
+
+<app-modal [aberto]="pacienteModalAberto"
+  [titulo]="modoFormulario === 'criar' ? 'Novo paciente' : (pacienteSelecionado?.nome ?? 'Paciente')"
+  descricao="Cadastro de paciente" [modoEdicao]="true" [mostrarBotaoEditar]="false" (fechar)="fecharPacienteModal()"
+  (salvar)="salvarPaciente()" (cancelar)="fecharPacienteModal()">
+  <div class="patient-modal">
+    <form class="patient-form" [formGroup]="formPaciente">
+      @if (pacienteSelecionado) {
+      <label class="full-width">
+        <span>Codigo do paciente</span>
+        <input type="text" [value]="pacienteSelecionado.codigoPaciente" readonly />
+      </label>
+      }
+
+      <div class="grid-2">
+        <label>
+          <span>Nome</span>
+          <input type="text" formControlName="nome" />
+        </label>
+
+        <label>
+          <span>Codigo da carteirinha</span>
+          <input type="text" formControlName="numeroCarteirinha" />
+        </label>
+
+        <label>
+          <span>Data de nascimento</span>
+          <input type="date" formControlName="dataNascimento" />
+        </label>
+
+        <label>
+          <span>Telefone</span>
+          <input type="text" formControlName="telefone" placeholder="(000) 00000-0000" maxlength="13"
+            (input)="onTelefoneInput($event)" />
+        </label>
+
+        <label>
+          <span>Email</span>
+          <input type="email" formControlName="email" />
+        </label>
+
+        <label>
+          <span>Convenio</span>
+          <select formControlName="convenioId">
+            <option value="">Particular</option>
+            @for (convenio of convenios; track convenio.id) {
+            <option [value]="convenio.id">{{ convenio.nome }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="checkbox-field">
+          <input type="checkbox" formControlName="whatsappPush" />
+          <span>WhatsApp para comunicados</span>
+        </label>
+      </div>
+
+      @if (modoFormulario === 'editar' && pacienteSelecionado) {
+      <div class="patient-modal__actions">
+        <button type="button" class="secondary-action" (click)="agendarNovaConsulta()">Agendar consulta</button>
+      </div>
+      }
+    </form>
+  </div>
+</app-modal>
+
+<app-modal [aberto]="modalExclusaoAberto" titulo="Excluir paciente" descricao="Acao permanente"
+  [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="false" (fechar)="fecharModalExclusao()">
+  <div class="confirmacao-exclusao">
+    <p>
+      Tem certeza que deseja excluir
+      <strong>{{ pacienteParaExcluir?.nome }}</strong>?
+    </p>
+
+    <div class="confirmacao-exclusao__acoes">
+      <button type="button" class="secondary-action" (click)="fecharModalExclusao()" [disabled]="excluindo">
+        Cancelar
+      </button>
+      <button type="button" class="danger-action" (click)="confirmarExclusaoPaciente()" [disabled]="excluindo">
+        {{ excluindo ? 'Excluindo...' : 'Excluir paciente' }}
+      </button>
+    </div>
+  </div>
+</app-modal>

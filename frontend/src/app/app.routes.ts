@@ -1,21 +1,34 @@
 import { Routes } from '@angular/router';
-import { LoginComponent }              from './login/login.component';
-import { HomeComponent }               from './home/home.component';
-import { AgendaComponent }             from './agenda/agenda.component';
-import { AgendaDouToraComponent }      from './agenda-doutora/agenda-doutora.component';
-import { AgendamentoComponent }        from './agendamento/agendamento.component';
-import { CadastroPacienteComponent }   from './cadastro-paciente/cadastro-paciente.component';
-import { PacientesComponent }          from './pacientes/pacientes.component';
-import { HistoricoPacienteComponent }  from './historico-paciente/historico-paciente.component';
+import { authGuard, adminGuard, loginGuard } from './guards/auth.guard';
+import { LoginComponent } from './pages/login/login.component';
+import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { AgendaComponent } from './pages/agenda/agenda.component';
+import { PacientesComponent } from './pages/pacientes/pacientes.component';
+import { MinhaContaPage } from './pages/minha-conta/minha-conta.component';
+import { UsuariosPage } from './pages/usuarios/usuarios.component';
+import { MainLayoutComponent } from './layout/main-layout.component';
+import { ConsultasComponent } from './pages/consultas/consultas.component';
+import { ConveniosPage } from './pages/convenios/convenios.component';
+import { TratamentosPage } from './pages/tratamentos/tratamentos.component';
 
 export const routes: Routes = [
-  { path: '',                   redirectTo: 'login', pathMatch: 'full' },
-  { path: 'login',              component: LoginComponent },
-  { path: 'home',               component: HomeComponent },
-  { path: 'agenda',             component: AgendaComponent },
-  { path: 'agenda-doutora',     component: AgendaDouToraComponent },
-  { path: 'agendamento',        component: AgendamentoComponent },
-  { path: 'cadastro-paciente',  component: CadastroPacienteComponent },
-  { path: 'pacientes',          component: PacientesComponent },
-  { path: 'historico-paciente', component: HistoricoPacienteComponent },
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: 'login', component: LoginComponent, canActivate: [loginGuard] },
+  { path: 'dashboard', redirectTo: 'dashboard', pathMatch: 'full' },
+  {
+    path: 'dashboard',
+    component: MainLayoutComponent,
+    canActivate: [authGuard],
+    children: [
+      { path: '', component: DashboardComponent, pathMatch: 'full' },
+      { path: 'consultas', component: ConsultasComponent },
+      { path: 'agendar-consulta', component: AgendaComponent },
+      { path: 'pacientes', component: PacientesComponent },
+      { path: 'tratamentos', component: TratamentosPage },
+      { path: 'convenios', component: ConveniosPage },
+      { path: 'minha-conta', component: MinhaContaPage },
+      { path: 'usuarios', component: UsuariosPage, canActivate: [adminGuard] },
+    ],
+  },
+  { path: '**', redirectTo: 'dashboard' },
 ];

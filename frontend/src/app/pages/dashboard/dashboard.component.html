@@ -1,0 +1,188 @@
+<section class="dashboard-page">
+  <header class="dashboard-hero">
+    <div>
+      <p class="dashboard-hero__eyebrow">Painel operacional</p>
+      <h1>Bem-vindo, {{ nomeUsuario }}</h1>
+      <p>Acompanhe consultas do dia, produtividade clinica e desempenho financeiro em um unico painel.</p>
+    </div>
+
+    <div class="dashboard-hero__hint">
+      <span>Hoje</span>
+      <strong>{{ consultasHoje }} consultas no fluxo de atendimento</strong>
+    </div>
+  </header>
+
+  <section class="dashboard-grid">
+    <article class="dashboard-panel dashboard-panel--wide">
+      <div class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Resumo do dia</span>
+          <h2>Indicadores operacionais</h2>
+        </div>
+      </div>
+
+      <div class="resumo-dia">
+
+        <div class="resumo-item">
+          <span>Consultas hoje</span>
+          <strong>{{ consultasHoje }}</strong>
+          <small>{{ confirmacoesHoje }} confirmacoes de comparecimento</small>
+        </div>
+        <div class="resumo-item">
+          <span>Consultas confirmadas</span>
+          <strong>{{ confirmacoesHoje }}</strong>
+          <small>Taxa de comparecimento estimada: 81%</small>
+        </div>
+        <div class="resumo-item">
+          <span>Cancelamentos</span>
+          <strong>{{ cancelamentosHoje }}</strong>
+          <small>Ultima atualizacao ha 10 minutos</small>
+        </div>
+        <div class="resumo-item">
+          <span>Pacientes ativos</span>
+          <strong>{{ pacientesAtivos }}</strong>
+          <small>{{ pacientesNovosNoMes }} novos no mes</small>
+        </div>
+      </div>
+    </article>
+
+    <article class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Agenda proxima</span>
+          <h2>Consultas seguintes</h2>
+        </div>
+      </div>
+
+      <ul class="agenda-list">
+        @for (consulta of proximasConsultas; track consulta.id) {
+        <li>
+          <span>{{ consulta.horario }}</span>
+          <div>
+            <strong>{{ consulta.paciente }}</strong>
+            <p>{{ consulta.procedimento }} • {{ consulta.dentista }}</p>
+            <a class="agenda-link" [routerLink]="'/dashboard/consultas'" [queryParams]="{ consultaId: consulta.id }">Ver
+              consulta</a>
+          </div>
+        </li>
+        }
+      </ul>
+    </article>
+  </section>
+
+  <section class="dashboard-grid dashboard-grid--insights">
+    <article class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Procedimentos do mes</span>
+          <h2>Mais realizados</h2>
+        </div>
+      </div>
+
+      <ul class="ranking-list">
+        @for (item of procedimentosMaisRealizados; track item.nome) {
+        <li>
+          <div>
+            <strong>{{ item.nome }}</strong>
+            <small>{{ item.total }} realizados</small>
+          </div>
+          <span>{{ item.percentual }}%</span>
+        </li>
+        }
+      </ul>
+    </article>
+
+    <article class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Faturamento</span>
+          <h2>Atual do mes</h2>
+        </div>
+
+        <div class="faturamento-actions">
+          <select class="faturamento-select" [(ngModel)]="periodoFaturamentoSelecionado"
+            (ngModelChange)="aoMudarPeriodoFaturamento($event)">
+            <option value="mensal">Mensal</option>
+            <option value="trimestral">Trimestral</option>
+            <option value="anual">Anual</option>
+          </select>
+
+          <button type="button" class="icon-btn" (click)="alternarOcultacaoFaturamento()"
+            [attr.aria-label]="ocultarFaturamento ? 'Exibir faturamento' : 'Ocultar faturamento'">
+            @if (ocultarFaturamento) {
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            } @else {
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M3 3l18 18" />
+              <path d="M10.6 10.6A2 2 0 0 0 12 15a2 2 0 0 0 1.4-.6" />
+              <path d="M6.2 6.2C3.7 7.9 2 12 2 12s3.5 7 10 7c1.2 0 2.4-.2 3.4-.5" />
+              <path d="M13.8 4.4C18 5.2 22 12 22 12a18.7 18.7 0 0 1-2.8 4.1" />
+            </svg>
+            }
+          </button>
+        </div>
+      </div>
+
+      <div class="faturamento-card">
+        <strong>{{ faturamentoExibido }}</strong>
+        <p>{{ rotuloPeriodoFaturamento }} atual: {{ faturamentoExibido }}</p>
+        <div class="meta-progress">
+          <div class="meta-progress__bar" [style.width.%]="percentualMetaAtingida"></div>
+        </div>
+        <p class="faturamento-card__summary">
+          <span class="faturamento-card__summary-value">{{ metaResumoExibido }}</span>
+          <span class="faturamento-card__summary-separator">•</span>
+          <span class="faturamento-card__summary-value faturamento-card__summary-value--right">{{
+            crescimentoResumoExibido }}</span>
+        </p>
+        <small class="faturamento-card__hint">Meta atingida e crescimento do periodo selecionado</small>
+      </div>
+
+      <div class="faturamento-chart">
+        <div class="faturamento-chart__header">
+          <h3>{{ tituloGraficoFaturamento }}</h3>
+          <span>Evolucao do faturamento no periodo selecionado</span>
+        </div>
+
+        <div class="faturamento-chart__canvas-wrap">
+          <canvas #faturamentoCanvas class="faturamento-chart__canvas" [class.is-hidden]="ocultarFaturamento"></canvas>
+
+          @if (ocultarFaturamento) {
+          <div class="faturamento-chart__placeholder" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M3 3l18 18" />
+              <path d="M2 12s3.5-7 10-7c2.2 0 4.1.8 5.7 1.9" />
+              <path d="M9.6 9.8a3 3 0 0 0 4.6 4.6" />
+              <path d="M20.1 13.1C18.4 15.9 15.7 19 12 19c-4.5 0-8-3.4-10-7 1-1.7 2.3-3.2 4-4.4" />
+            </svg>
+          </div>
+          }
+        </div>
+      </div>
+    </article>
+
+    <article class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <span class="panel-header__eyebrow">Convenios</span>
+          <h2>Utilizacao no mes</h2>
+        </div>
+      </div>
+
+      <ul class="ranking-list">
+        @for (item of conveniosUtilizados; track item.nome) {
+        <li>
+          <div>
+            <strong>{{ item.nome }}</strong>
+            <small>{{ item.consultas }} consultas</small>
+          </div>
+          <span>{{ item.percentual }}%</span>
+        </li>
+        }
+      </ul>
+    </article>
+  </section>
+</section>

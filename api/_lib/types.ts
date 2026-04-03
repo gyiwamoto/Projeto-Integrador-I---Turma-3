@@ -1,7 +1,7 @@
 export type TipoUsuario = 'admin' | 'dentista' | 'recepcionista';
 
 export interface Usuario {
-	id: number;
+	id: string;
 	nome: string;
 	email: string;
 	senha: string;
@@ -17,8 +17,7 @@ export interface CriarUsuarioInput {
 }
 
 export interface JwtUsuarioPayload {
-	sub: string;
-	id: number;
+	id: string;
 	nome: string;
 	email: string;
 	tipo_usuario: TipoUsuario;

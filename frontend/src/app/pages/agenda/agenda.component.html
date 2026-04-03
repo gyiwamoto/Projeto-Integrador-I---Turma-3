@@ -1,0 +1,67 @@
+<app-agenda-calendario [modoVisualizacao]="modoVisualizacao" [mesAtual]="mesAtual" [anoAtual]="anoAtual"
+  [mesSelecionadoEhAtual]="mesSelecionadoEhAtual" [diasExibidos]="diasExibidos" [diaSelecionado]="diaSelecionado"
+  [mesSelecionado]="mesSelecionado" [doutoraSelecionada]="doutoraSelecionada" [horas]="horas" [minutos]="minutos"
+  [nomeDiaSelecionado]="nomeDiaSelecionado" [consultaNoSlot]="consultaNoSlot"
+  (modoVisualizacaoChange)="selecionarModoVisualizacao($event)" (periodoAnterior)="periodoAnterior()"
+  (periodoProximo)="periodoProximo()" (diaSelecionadoChange)="selecionarDia($event.dia, $event.mes, $event.ano)"
+  (doutoraSelecionadaChange)="selecionarDoutora($event)" (slotClick)="clicarSlot($event.hora, $event.min)">
+</app-agenda-calendario>
+
+<app-modal [aberto]="modalAcaoAberto" titulo="O que deseja fazer?" descricao="Escolha a acao para o horario selecionado"
+  [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="true" (fechar)="fecharModalAcao()">
+  <div class="acao-modal">
+    <p class="slot-info" *ngIf="slotSelecionado">
+      {{ nomeDiaSelecionado }}, {{ diaSelecionado | number:'2.0-0' }} de {{ mesAtual }}
+      as {{ slotSelecionado.hora }}:{{ slotSelecionado.min === 0 ? '00' : slotSelecionado.min }}
+    </p>
+    <div class="opcoes">
+      <button class="opcao-btn primary" (click)="escolherAgendar()">
+        <span class="opcao-btn__titulo">Agendar paciente</span>
+        <small>Selecionar paciente ja cadastrado</small>
+      </button>
+      <button class="opcao-btn secondary" (click)="escolherCadastrar()">
+        <span class="opcao-btn__titulo">Cadastrar paciente</span>
+        <small>Criar cadastro antes do agendamento</small>
+      </button>
+    </div>
+  </div>
+</app-modal>
+
+<app-modal [aberto]="modalBuscaAberto" titulo="Buscar paciente" descricao="Selecione um paciente para continuar"
+  [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="true" (fechar)="fecharModalBusca()">
+  <div class="busca-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+    <input type="text" [(ngModel)]="termoBusca" placeholder="Nome, codigo, celular, ID..." />
+  </div>
+
+  <div class="lista-pacientes">
+    <div *ngFor="let p of pacientesFiltrados" class="paciente-item" (click)="selecionarPaciente(p)">
+      <div class="paciente-avatar">{{ p.nome[0] }}</div>
+      <div class="paciente-info">
+        <span class="paciente-nome">{{ p.nome }}</span>
+        <span class="paciente-detalhe">ID {{ p.id }} · {{ p.telefone || 'sem telefone' }}</span>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="paciente-arrow">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </div>
+    <div *ngIf="pacientesFiltrados.length === 0" class="sem-resultado">Nenhum paciente encontrado.</div>
+  </div>
+</app-modal>
+
+<app-modal [aberto]="modalConfirmAberto" titulo="Confirmar agendamento" descricao="Revise os dados"
+  [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="true" (fechar)="fecharModalConfirmacao()">
+  <p>
+    <strong>{{ pacienteSelecionado?.nome }}</strong><br>
+    {{ nomeDiaSelecionado }}, {{ diaSelecionado | number:'2.0-0' }} de {{ mesAtual }}<br>
+    as {{ slotSelecionado?.hora }}:{{ slotSelecionado?.min === 0 ? '00' : slotSelecionado?.min }}<br>
+    {{ nomeProfissionalSelecionado }}
+  </p>
+  <div class="modal-actions">
+    <button class="btn-confirm" (click)="confirmarAgendamento()">Confirmar</button>
+    <button class="btn-cancel" (click)="fecharModalConfirmacao()">Cancelar</button>
+  </div>
+</app-modal>

@@ -34,6 +34,12 @@
   cursor: pointer;
 }
 
+.admin-area__usuario {
+  background: #fff2e5;
+  color: #7a4323;
+  border: 1px solid #dfbf9f;
+}
+
 .admin-area button:disabled {
   opacity: 0.72;
   cursor: not-allowed;

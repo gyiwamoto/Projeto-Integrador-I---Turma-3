@@ -1,0 +1,43 @@
+:host {
+  display: block;
+}
+
+.consultas-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.consultas-page__header {
+  padding: 1.2rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(20, 48, 74, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+
+  h1 {
+    margin: 0 0 0.35rem;
+    color: #17324d;
+  }
+
+  p {
+    margin: 0;
+    color: #5f7488;
+  }
+}
+
+.consultas-page__eyebrow {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6d8399;
+}
+
+.feedback {
+  margin: 0;
+  border-radius: 0.9rem;
+  padding: 0.8rem 0.95rem;
+  background: rgba(31, 111, 141, 0.08);
+  color: #17324d;
+}

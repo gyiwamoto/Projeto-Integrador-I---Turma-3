@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "outputDirectory": "public",
+  "builds": [
+    {
+      "src": "auth/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "pacientes/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "convenios/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "consultas/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "tratamentos/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "procedimentos-realizados/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "usuarios/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}

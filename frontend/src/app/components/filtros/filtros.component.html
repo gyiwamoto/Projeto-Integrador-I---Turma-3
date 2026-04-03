@@ -1,0 +1,33 @@
+<section class="filtros">
+  <header class="filtros__header">
+    <h3>{{ titulo }}</h3>
+  </header>
+
+  <div class="filtros__grid">
+    @for (campo of campos; track campo.key) {
+    <label>
+      <span>{{ campo.label }}</span>
+
+      @if (campo.type === 'select') {
+      <select [(ngModel)]="valores[campo.key]">
+        <option value="">Todos</option>
+        @for (opcao of campo.options ?? []; track opcao.value) {
+        <option [value]="opcao.value">{{ opcao.label }}</option>
+        }
+      </select>
+      } @else {
+      <input [type]="campo.type" [(ngModel)]="valores[campo.key]" [placeholder]="campo.placeholder ?? ''" />
+      }
+    </label>
+    }
+  </div>
+
+  <footer class="filtros__actions">
+    @for (acao of acoesOrdenadas; track acao.id) {
+    <button type="button" [class]="acao.classe === 'primary' ? 'primary-action' : 'secondary-action'"
+      (click)="executarAcao(acao)">
+      {{ acao.label }}
+    </button>
+    }
+  </footer>
+</section>

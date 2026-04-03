@@ -1,0 +1,9 @@
+<div class="toast-container" aria-live="polite" aria-atomic="true">
+  @for (toast of toastService.toasts(); track toast.id) {
+  <div class="toast" [class.toast-sucesso]="toast.tipo === 'sucesso'" [class.toast-erro]="toast.tipo === 'erro'"
+    [class.toast-info]="toast.tipo === 'info'">
+    <p>{{ toast.texto }}</p>
+    <button type="button" (click)="toastService.remover(toast.id)" aria-label="Fechar notificacao">x</button>
+  </div>
+  }
+</div>

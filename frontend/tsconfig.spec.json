@@ -4,7 +4,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
+    "rootDir": "./src/app",
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo.frontend.spec.json",
     "types": ["vitest/globals"]
   },
-  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
+  "include": ["src/app/**/*.spec.ts"]
 }

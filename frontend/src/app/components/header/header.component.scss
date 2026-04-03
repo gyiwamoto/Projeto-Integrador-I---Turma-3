@@ -1,62 +1,106 @@
+:host {
+  display: block;
+}
+
 .app-header {
+  min-height: 4.75rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  background: #ffffff;
-  border-bottom: 1px solid #e6ecf4;
+  border-bottom: 1px solid rgba(18, 34, 54, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(12, 28, 46, 0.04);
 }
 
 .brand {
   display: flex;
   flex-direction: column;
   text-decoration: none;
-}
-
-.brand__title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #123151;
+  color: #17324d;
 }
 
 .brand__subtitle {
-  font-size: 0.85rem;
-  color: #667b95;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6d8399;
+}
+
+.brand__title {
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 
 .session-status {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
 }
 
-.status-chip {
-  display: inline-flex;
-  align-items: center;
+.user-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.user-chip__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #17324d;
+}
+
+.user-chip__role {
+  font-size: 0.78rem;
+  color: #6d8399;
+}
+
+.status-chip,
+.logout-button {
+  border: 0;
   border-radius: 999px;
-  padding: 0.35rem 0.7rem;
+  padding: 0.58rem 0.95rem;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .status-chip--checking {
-  color: #855e00;
-  background: #fff4d6;
-}
-
-.status-chip--ok {
-  color: #0b6b43;
-  background: #dbf5e8;
+  background: #eef3f8;
+  color: #51708e;
 }
 
 .status-chip--idle {
-  color: #49596d;
-  background: #edf2f8;
+  background: #f5efe8;
+  color: #8b5c38;
 }
 
-@media (max-width: 700px) {
+.logout-button {
+  cursor: pointer;
+  background: linear-gradient(135deg, #1f6f8d, #224b78);
+  color: #fff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.logout-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(34, 75, 120, 0.22);
+}
+
+@media (max-width: 720px) {
   .app-header {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .session-status {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .user-chip {
     align-items: flex-start;
   }
 }

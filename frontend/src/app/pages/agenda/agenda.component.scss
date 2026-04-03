@@ -1,0 +1,263 @@
+$blue: #3a9fd6;
+$blue-dark: #1a6fa8;
+$blue-pale: #e8f4fc;
+$text: #1a2e42;
+$muted: #8aabcc;
+$border: #cce0f0;
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal {
+  background: white;
+  border-radius: 20px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+  text-align: center;
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: $text;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    font-size: 0.88rem;
+    color: $muted;
+    line-height: 1.7;
+    margin-bottom: 1.25rem;
+    strong {
+      color: $blue-dark;
+    }
+  }
+
+  .slot-info {
+    font-size: 0.85rem;
+    color: $text;
+    margin-bottom: 0.9rem;
+    background: rgba(232, 244, 252, 0.8);
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 0.7rem 0.8rem;
+  }
+}
+
+// Popup de opções
+.popup-opcoes {
+  max-width: 300px;
+}
+
+.opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.acao-modal {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.opcao-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 12px;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  &:hover {
+    opacity: 0.85;
+  }
+  &.primary {
+    background: $blue;
+    color: white;
+  }
+  &.secondary {
+    background: $blue-pale;
+    color: $blue-dark;
+  }
+
+  .opcao-btn__titulo {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  small {
+    font-size: 0.76rem;
+    opacity: 0.86;
+  }
+}
+
+// Modal busca
+.modal-busca {
+  max-width: 360px;
+  text-align: left;
+}
+
+.busca-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid $border;
+  border-radius: 50px;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  &:focus-within {
+    border-color: $blue;
+  }
+  svg {
+    width: 16px;
+    height: 16px;
+    color: $muted;
+    flex-shrink: 0;
+  }
+  input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 0.88rem;
+    font-family: 'DM Sans', sans-serif;
+    color: $text;
+    &::placeholder {
+      color: $muted;
+    }
+  }
+}
+
+.lista-pacientes {
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  border: 1px solid $border;
+  border-radius: 12px;
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $border;
+    border-radius: 2px;
+  }
+}
+
+.paciente-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 0.5px solid $border;
+  cursor: pointer;
+  transition: background 0.15s;
+  &:last-child {
+    border-bottom: none;
+  }
+  &:hover {
+    background: $blue-pale;
+  }
+}
+
+.paciente-avatar {
+  width: 34px;
+  height: 34px;
+  background: $blue;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.paciente-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  .paciente-nome {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: $text;
+  }
+  .paciente-detalhe {
+    font-size: 0.75rem;
+    color: $muted;
+  }
+}
+
+.paciente-arrow {
+  width: 16px;
+  height: 16px;
+  color: $muted;
+}
+
+.sem-resultado {
+  text-align: center;
+  padding: 1.5rem;
+  color: $muted;
+  font-size: 0.85rem;
+}
+
+// Botões comuns
+.btn-fechar {
+  width: 100%;
+  padding: 0.6rem;
+  background: none;
+  border: 1.5px solid $border;
+  border-radius: 50px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  color: $muted;
+  cursor: pointer;
+  &:hover {
+    border-color: $blue;
+    color: $blue;
+  }
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  button {
+    flex: 1;
+    padding: 0.65rem;
+    border: none;
+    border-radius: 50px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+  .btn-confirm {
+    background: $blue;
+    color: white;
+  }
+  .btn-cancel {
+    background: #fdf0f0;
+    color: #e53935;
+  }
+}

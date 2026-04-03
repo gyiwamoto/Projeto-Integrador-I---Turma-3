@@ -1,0 +1,74 @@
+<section class="cadastro-page">
+  <div class="cadastro-page__header">
+    <div>
+      <p class="cadastro-page__eyebrow">Administracao</p>
+      <h1>Tratamentos</h1>
+      <p>Cadastre e mantenha os tratamentos disponiveis na clinica.</p>
+    </div>
+    <button type="button" class="primary-action" (click)="abrirNovoTratamento()">Novo tratamento</button>
+  </div>
+
+  <app-filtros [titulo]="'Filtrar tratamentos'" [campos]="camposFiltro"
+    (filtrosChange)="onFiltrosChange($event)"></app-filtros>
+
+  @if (erroMensagem) {
+  <p class="feedback feedback--erro">{{ erroMensagem }}</p>
+  }
+
+  @if (sucessoMensagem) {
+  <p class="feedback feedback--sucesso">{{ sucessoMensagem }}</p>
+  }
+
+  <app-tabela [colunas]="colunasTabela" [linhas]="linhasTabelaTratamentos" [carregando]="carregando"
+    mensagemCarregando="Carregando tratamentos..." mensagemSemDados="Nenhum tratamento cadastrado."
+    [acaoEditar]="acaoEditarTratamento" [acaoExcluir]="acaoExcluirTratamento"></app-tabela>
+</section>
+
+<app-modal [aberto]="modalTratamentoAberto"
+  [titulo]="modoFormulario === 'criar' ? 'Novo tratamento' : (tratamentoSelecionado?.nome ?? 'Tratamento')"
+  descricao="Cadastro de tratamento" [modoEdicao]="true" [mostrarBotaoEditar]="false" (fechar)="fecharModalTratamento()"
+  (salvar)="salvarTratamento()" (cancelar)="fecharModalTratamento()">
+  <form class="cadastro-form" [formGroup]="formTratamento">
+    <label>
+      <span>Nome</span>
+      <input type="text" formControlName="nome" />
+    </label>
+
+    <label>
+      <span>Descricao</span>
+      <textarea rows="3" formControlName="descricao"></textarea>
+    </label>
+
+    <label>
+      <span>Valor</span>
+      <input type="number" min="0" step="0.01" formControlName="valor" />
+    </label>
+
+    <label>
+      <span>Status</span>
+      <select formControlName="ativo">
+        <option [ngValue]="true">Ativo</option>
+        <option [ngValue]="false">Inativo</option>
+      </select>
+    </label>
+  </form>
+</app-modal>
+
+<app-modal [aberto]="modalExclusaoAberto" titulo="Excluir tratamento" descricao="Acao permanente"
+  [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="false" (fechar)="fecharModalExclusao()">
+  <div class="confirmacao-exclusao">
+    <p>
+      Tem certeza que deseja excluir
+      <strong>{{ tratamentoSelecionado?.nome }}</strong>?
+    </p>
+
+    <div class="confirmacao-exclusao__acoes">
+      <button type="button" class="secondary-action" (click)="fecharModalExclusao()" [disabled]="excluindo">
+        Cancelar
+      </button>
+      <button type="button" class="danger-action" (click)="confirmarExclusaoTratamento()" [disabled]="excluindo">
+        {{ excluindo ? 'Excluindo...' : 'Excluir tratamento' }}
+      </button>
+    </div>
+  </div>
+</app-modal>

@@ -1,0 +1,38 @@
+@if (aberto) {
+<div class="modal-backdrop" role="presentation" (click)="aoClicarFora()">
+  <section class="modal-card" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <header class="modal-card__header">
+      <div>
+        <p class="modal-card__eyebrow" *ngIf="descricao">{{ descricao }}</p>
+        <h2>{{ titulo }}</h2>
+      </div>
+
+      <button type="button" class="modal-card__close" (click)="fechar.emit()" aria-label="Fechar modal">
+        ×
+      </button>
+    </header>
+
+    <div class="modal-card__body">
+      <ng-content></ng-content>
+    </div>
+
+    <footer class="modal-card__footer">
+      @if (modoEdicao) {
+      <button type="button" class="modal-button modal-button--ghost" (click)="cancelar.emit()">
+        Cancelar
+      </button>
+      <button type="button" class="modal-button modal-button--primary" (click)="salvar.emit()">
+        Salvar
+      </button>
+      } @else {
+      @if (mostrarBotaoEditar) {
+      <button type="button" class="modal-button modal-button--ghost" (click)="editar.emit()">Editar</button>
+      }
+      @if (mostrarBotaoFechar) {
+      <button type="button" class="modal-button modal-button--ghost" (click)="fechar.emit()">Fechar</button>
+      }
+      }
+    </footer>
+  </section>
+</div>
+}

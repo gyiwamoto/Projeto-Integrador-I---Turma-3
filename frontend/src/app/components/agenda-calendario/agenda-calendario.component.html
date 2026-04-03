@@ -1,0 +1,90 @@
+<div class="page">
+  <div class="card">
+    <div class="header">
+      <div class="header-left">
+        <img src="logo.png" alt="Sousa Iwamoto" class="logo" />
+      </div>
+      <svg class="cal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+        <polyline points="9 16 11 18 15 14" />
+      </svg>
+    </div>
+
+    <div class="modo-visualizacao">
+      <button type="button" class="modo-btn" [class.active]="modoVisualizacao === 'semana'"
+        (click)="selecionarModoVisualizacao('semana')">
+        Por semana
+      </button>
+      <button type="button" class="modo-btn" [class.active]="modoVisualizacao === 'mes'"
+        (click)="selecionarModoVisualizacao('mes')">
+        Por mes
+      </button>
+    </div>
+
+    <div class="semana-nav">
+      <button class="nav-arrow" (click)="navegarAnterior()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+
+      <div class="periodo-atual">
+        <span>{{ mesAtual }} {{ anoAtual }}</span>
+        <span class="mes-indicador" [class.atual]="mesSelecionadoEhAtual">
+          {{ mesSelecionadoEhAtual ? 'Mes atual' : 'Outro mes' }}
+        </span>
+      </div>
+
+      <div class="days-nav">
+        <button *ngFor="let dia of diasExibidos" class="day-btn" [class.hoje]="dia.hoje"
+          [class.passado]="isDiaPassado(dia)" [disabled]="isDiaPassado(dia)"
+          [class.active]="diaSelecionado === dia.numero && mesSelecionado === dia.mes" (click)="selecionarDia(dia)">
+          <span class="day-name">{{ dia.nome }}</span>
+          <span class="day-num">{{ dia.numero | number:'2.0-0' }}</span>
+        </button>
+      </div>
+
+      <button class="nav-arrow" (click)="navegarProximo()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="doutor-header">
+      <button class="doutor-btn" [class.active]="doutoraSelecionada === 'beatriz'"
+        (click)="selecionarDoutora('beatriz')">AGENDA DRA BEATRIZ</button>
+      <button class="doutor-btn" [class.active]="doutoraSelecionada === 'luciana'"
+        (click)="selecionarDoutora('luciana')">AGENDA DRA LUCIANA</button>
+    </div>
+
+    <div class="data-bar">{{ nomeDiaSelecionado }} - {{ diaSelecionado | number:'2.0-0' }} DE {{ mesAtual }} DE {{
+      anoAtual }}</div>
+
+    <div class="grade-wrap">
+      <table class="grade">
+        <thead>
+          <tr>
+            <th class="col-hora">HORA</th>
+            <th>00</th>
+            <th>15</th>
+            <th>30</th>
+            <th>45</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let hora of horas">
+            <td class="col-hora">{{ hora }}:00</td>
+            <td *ngFor="let min of minutos" class="slot" [class.ocupado]="obterConsulta(hora, min)"
+              (click)="clicarSlot(hora, min)">
+              <span *ngIf="obterConsulta(hora, min)" class="consulta">{{ obterConsulta(hora, min) }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

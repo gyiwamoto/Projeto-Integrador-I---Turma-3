@@ -1,0 +1,259 @@
+:host {
+  display: block;
+}
+
+.pacientes-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  color: #17324d;
+}
+
+.pacientes-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(18, 34, 54, 0.08);
+  box-shadow: 0 12px 30px rgba(12, 28, 46, 0.05);
+
+  h1 {
+    margin: 0 0 0.3rem;
+    font-size: 1.5rem;
+  }
+
+  p {
+    margin: 0;
+    color: #5f7488;
+    max-width: 46rem;
+    line-height: 1.6;
+  }
+}
+
+.pacientes-page__eyebrow,
+.section-label {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6d8399;
+}
+
+.pacientes-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.primary-action,
+.secondary-action {
+  border: 0;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-action {
+  border: 0;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #bb3e3e, #8e2727);
+  padding: 0.8rem 1rem;
+}
+
+.primary-action,
+.secondary-action {
+  padding: 0.8rem 1rem;
+}
+
+.primary-action {
+  background: linear-gradient(135deg, #1f6f8d, #224b78);
+  color: #fff;
+}
+
+.secondary-action {
+  background: rgba(31, 111, 141, 0.08);
+  color: #17324d;
+}
+
+.empty-consultations {
+  text-align: center;
+  color: #6d8399;
+  padding: 1.5rem !important;
+}
+
+.patient-modal {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.patient-form,
+.consulta-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: #17324d;
+  font-weight: 600;
+
+  span {
+    font-size: 0.85rem;
+    color: #44627d;
+  }
+
+  input,
+  textarea,
+  select {
+    width: 100%;
+    border: 1px solid rgba(18, 34, 54, 0.12);
+    border-radius: 0.9rem;
+    padding: 0.8rem 0.9rem;
+    background: #fff;
+    color: #17324d;
+    font: inherit;
+  }
+
+  input[readonly],
+  textarea[readonly] {
+    background: rgba(247, 250, 252, 0.8);
+    color: #28435d;
+  }
+}
+
+.checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+
+  input {
+    width: auto;
+    margin: 0;
+  }
+
+  span {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #17324d;
+  }
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.patient-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.confirmacao-exclusao {
+  display: grid;
+  gap: 1rem;
+
+  p {
+    margin: 0;
+    color: #17324d;
+    line-height: 1.6;
+  }
+}
+
+.confirmacao-exclusao__acoes {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.consultations-block {
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(18, 34, 54, 0.08);
+}
+
+.consultations-block__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+}
+
+.consultations-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.consultation-item {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(18, 34, 54, 0.08);
+  background: rgba(31, 111, 141, 0.05);
+  text-align: left;
+  color: #17324d;
+
+  strong {
+    font-size: 0.95rem;
+  }
+
+  span {
+    color: #44627d;
+  }
+
+  small {
+    color: #6d8399;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}
+
+.consulta-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background: rgba(31, 111, 141, 0.05);
+  color: #17324d;
+
+  p {
+    margin: 0;
+  }
+}
+
+@media (max-width: 960px) {
+  .pacientes-page__header,
+  .consultations-block__header,
+  .grid-2 {
+    grid-template-columns: 1fr;
+    display: grid;
+    align-items: stretch;
+  }
+
+  .pacientes-page__header {
+    align-items: stretch;
+  }
+}
