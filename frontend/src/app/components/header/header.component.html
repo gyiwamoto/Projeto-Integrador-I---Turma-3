@@ -1,16 +1,20 @@
 <header class="app-header">
-  <a class="brand" routerLink="/">
-    <span class="brand__title">{{ titulo }}</span>
+  <a class="brand" routerLink="/dashboard">
     <span class="brand__subtitle">{{ subtitulo }}</span>
+    <span class="brand__title">{{ titulo }}</span>
   </a>
 
   <div class="session-status" aria-live="polite">
     @if (verificandoSessao) {
-    <span class="status-chip status-chip--checking">Verificando sessao...</span>
+    <span class="status-chip status-chip--checking">Verificando sessão...</span>
     } @else if (sessaoAtiva) {
-    <span class="status-chip status-chip--ok">Sessao ativa</span>
+    <div class="user-chip">
+      <span class="user-chip__name">{{ usuarioNome }}</span>
+      <span class="user-chip__role">{{ obterDescricaoUsuario() }}</span>
+    </div>
+    <button type="button" class="logout-button" (click)="logout()">Sair</button>
     } @else {
-    <span class="status-chip status-chip--idle">Sessao inativa</span>
+    <span class="status-chip status-chip--idle">Sessão inativa</span>
     }
   </div>
 </header>

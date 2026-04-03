@@ -1,18 +1,44 @@
 .sidebar {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-height: 0;
+  padding: 1.25rem;
+  border-right: 1px solid rgba(18, 34, 54, 0.08);
+  background: linear-gradient(180deg, rgba(245, 249, 253, 0.98), rgba(237, 243, 249, 0.92));
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar__profile {
   padding: 1rem;
-  background: #f7f9fc;
-  border-right: 1px solid #e3eaf3;
-  min-height: calc(100dvh - 72px);
+  border-radius: 1rem;
+  background: #fff;
+  border: 1px solid rgba(18, 34, 54, 0.08);
+  box-shadow: 0 12px 28px rgba(12, 28, 46, 0.05);
+}
+
+.sidebar__eyebrow {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6d8399;
+}
+
+.sidebar__name {
+  color: #183048;
+  font-size: 1rem;
 }
 
 .sidebar__title {
   margin: 0;
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: #6c7e94;
   text-transform: uppercase;
 }
@@ -26,32 +52,37 @@
 .sidebar__link {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  border-radius: 0.6rem;
-  padding: 0.65rem 0.7rem;
-  color: #2f4a67;
+  gap: 0.7rem;
+  border-radius: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  color: #264765;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    color 0.15s ease;
 }
 
 .sidebar__link:hover {
-  background: #eaf0f7;
+  background: rgba(31, 111, 141, 0.09);
+  transform: translateX(2px);
 }
 
 .sidebar__link.is-active {
-  background: #dfeaf8;
-  color: #153a63;
+  background: linear-gradient(135deg, rgba(31, 111, 141, 0.15), rgba(34, 75, 120, 0.12));
+  color: #17324d;
 }
 
 .material-symbols-outlined {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }
 
 @media (max-width: 900px) {
   .sidebar {
     min-height: auto;
     border-right: 0;
-    border-bottom: 1px solid #e3eaf3;
+    border-bottom: 1px solid rgba(18, 34, 54, 0.08);
   }
 
   .sidebar__nav {

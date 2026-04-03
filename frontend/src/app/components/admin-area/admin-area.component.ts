@@ -1,6 +1,11 @@
 import { Component, Input } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthApiService } from '../../services/auth.service';
+import { AuthService } from '../../services/auth.service';
+
+interface UsuarioSessao {
+  nome: string;
+  tipo_usuario: 'admin' | 'dentista' | 'recepcionista';
+}
 
 @Component({
   selector: 'app-admin-area',
@@ -14,13 +19,20 @@ export class AdminAreaComponent {
 
   carregando = false;
   sessaoAtiva = false;
+  usuarioLogado: UsuarioSessao | null = null;
 
   constructor(
     private readonly router: Router,
-    private readonly authApiService: AuthApiService,
+    private readonly authService: AuthService,
   ) {
-    this.authApiService.validarSessao().subscribe((autenticado) => {
+    this.sessaoAtiva = this.authService.possuiToken();
+    this.usuarioLogado = this.authService.obterSessaoAutenticada() as UsuarioSessao | null;
+
+    this.authService.validarSessao().subscribe((autenticado) => {
       this.sessaoAtiva = autenticado;
+      this.usuarioLogado = autenticado
+        ? (this.authService.obterSessaoAutenticada() as UsuarioSessao | null)
+        : null;
     });
   }
 
@@ -32,19 +44,47 @@ export class AdminAreaComponent {
     void this.router.navigateByUrl('/login');
   }
 
+  irParaDashboard(): void {
+    if (!this.temSessaoAtiva()) {
+      return;
+    }
+
+    void this.router.navigateByUrl('/dashboard');
+  }
+
+  estaNaAreaAdministrativa(): boolean {
+    return (this.router.url ?? '').startsWith('/dashboard');
+  }
+
+  obterIdentificacaoUsuario(): string {
+    if (!this.usuarioLogado) {
+      return '';
+    }
+
+    const prefixo =
+      this.usuarioLogado.tipo_usuario === 'admin'
+        ? 'Admin'
+        : this.usuarioLogado.tipo_usuario === 'dentista'
+          ? 'Dentista'
+          : 'Recepcionista';
+    return `${prefixo} ${this.usuarioLogado.nome}`;
+  }
+
   logout(): void {
     this.carregando = true;
 
-    this.authApiService.logout().subscribe({
+    this.authService.logout().subscribe({
       next: () => {
         this.carregando = false;
         this.sessaoAtiva = false;
+        this.usuarioLogado = null;
         void this.router.navigateByUrl('/');
       },
       error: () => {
         this.carregando = false;
-        this.authApiService.removerToken();
+        this.authService.removerToken();
         this.sessaoAtiva = false;
+        this.usuarioLogado = null;
         void this.router.navigateByUrl('/');
       },
     });

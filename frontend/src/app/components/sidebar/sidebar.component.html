@@ -1,5 +1,10 @@
 <aside class="sidebar" aria-label="Menu principal">
-  <p class="sidebar__title">Navegacao</p>
+  <div class="sidebar__profile">
+    <span class="sidebar__eyebrow">Área logada</span>
+    <strong class="sidebar__name">{{ usuarioNome }}</strong>
+  </div>
+
+  <p class="sidebar__title">Navegação</p>
 
   <nav class="sidebar__nav">
     @for (item of menuItemsVisiveis; track item.label) {

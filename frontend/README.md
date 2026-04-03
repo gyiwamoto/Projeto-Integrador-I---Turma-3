@@ -1,59 +1,45 @@
-# DentistaOrganizado
+# Frontend - Dentista Organizado
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.1.
+Aplicacao Angular do projeto, com autenticacao, dashboard e modulos clinicos.
 
-## Development server
+## Requisitos
 
-To start a local development server, run:
+- Node.js 22.x
+- npm 10.x
 
-```bash
-ng serve
-```
+## Scripts
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- `npm run start`: inicia o Angular sem proxy.
+- `npm run start:proxy`: inicia o Angular com proxy para a API local.
+- `npm run build`: build de producao.
+- `npm run watch`: build em modo watch.
+- `npm run test`: executa testes.
 
-## Code scaffolding
+## Desenvolvimento local
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Executando apenas o frontend:
 
 ```bash
-ng generate --help
+npm install
+npm run start:proxy -- --port 4200
 ```
 
-## Building
+Com isso, chamadas para `/api/*` sao encaminhadas para `http://localhost:3000` por meio de `proxy.conf.json`.
 
-To build the project run:
+## Notas funcionais recentes
+
+- Tela de pacientes alinhada ao schema do banco (`pacientes`):
+	- `codigo_paciente` e exibido como somente leitura e gerado no backend.
+	- formulario envia apenas campos aceitos pelo backend (`nome`, `data_nascimento`, `telefone`, `whatsapp_push`, `email`, `convenio_id`, `numero_carteirinha`).
+- Tela Minha Conta passou a exibir "Meus agendamentos" para `dentista` e `admin`.
+
+## Fluxo recomendado (workspace)
+
+Na raiz do repositorio:
 
 ```bash
-ng build
+npm run install-all
+npm run dev
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Esse fluxo sobe frontend e API em paralelo com as portas padrao do projeto.

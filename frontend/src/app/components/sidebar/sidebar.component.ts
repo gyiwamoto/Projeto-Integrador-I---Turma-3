@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthApiService } from '../../services/auth.service';
+import { AuthService } from '../../services/auth.service';
 
 interface MenuItem {
   label: string;
@@ -17,20 +17,40 @@ interface MenuItem {
   styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent {
-  constructor(private readonly authApiService: AuthApiService) {}
+  constructor(private readonly authService: AuthService) {}
 
   readonly menuItems: MenuItem[] = [
-    { label: 'Inicio', route: '/', icon: 'home', adminOnly: false },
-    { label: 'Consultas', route: '/consultas', icon: 'event', adminOnly: false },
-    { label: 'Pacientes', route: '/pacientes', icon: 'group', adminOnly: false },
-    { label: 'Convenios', route: '/convenios', icon: 'assignment', adminOnly: false },
-    { label: 'Tratamentos', route: '/tratamentos', icon: 'healing', adminOnly: false },
-    { label: 'Usuarios', route: '/usuarios', icon: 'person', adminOnly: true },
+    { label: 'Dashboard', route: '/dashboard', icon: 'space_dashboard', adminOnly: false },
+    {
+      label: 'Agendar Consulta',
+      route: '/dashboard/agendar-consulta',
+      icon: 'calendar_month',
+      adminOnly: false,
+    },
+    { label: 'Consultas', route: '/dashboard/consultas', icon: 'event_note', adminOnly: false },
+    { label: 'Pacientes', route: '/dashboard/pacientes', icon: 'groups', adminOnly: false },
+    {
+      label: 'Tratamentos',
+      route: '/dashboard/tratamentos',
+      icon: 'medical_services',
+      adminOnly: false,
+    },
+    { label: 'Convenios', route: '/dashboard/convenios', icon: 'work_history', adminOnly: false },
+    { label: 'Minha Conta', route: '/dashboard/minha-conta', icon: 'person', adminOnly: false },
+    {
+      label: 'Usuarios',
+      route: '/dashboard/usuarios',
+      icon: 'admin_panel_settings',
+      adminOnly: true,
+    },
   ];
 
+  get usuarioNome(): string {
+    return this.authService.obterSessaoAutenticada()?.nome ?? 'Usuário';
+  }
+
   get menuItemsVisiveis(): MenuItem[] {
-    const usuario = this.authApiService.obterUsuarioAtual();
-    const ehAdmin = usuario?.tipo_usuario === 'admin';
+    const ehAdmin = this.authService.ehAdmin();
 
     return this.menuItems.filter((item) => !item.adminOnly || ehAdmin);
   }
