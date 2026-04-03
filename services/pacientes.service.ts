@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './http.types';
 import { AuthError, autenticarRequisicao, verificarPermissaoDeletar } from '../api/_lib/auth';
 import pool from '../api/_lib/db';
 import { registrarLogFalha, registrarLogSucesso } from './logsAcessos.service';

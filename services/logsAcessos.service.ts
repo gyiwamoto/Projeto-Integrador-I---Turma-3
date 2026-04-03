@@ -1,4 +1,4 @@
-import type { VercelRequest } from '@vercel/node';
+import type { VercelRequest } from './http.types';
 import pool from '../api/_lib/db';
 
 export interface RegistrarLogAcessoInput {
