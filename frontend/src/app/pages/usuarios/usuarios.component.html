@@ -1,0 +1,93 @@
+<section class="usuarios-page">
+  <div class="usuarios-page__header">
+    <div>
+      <p class="usuarios-page__eyebrow">Administracao</p>
+      <h1>Usuarios do sistema</h1>
+      <p>Gerencie perfis administrativos, recepcao e profissionais com acesso ao sistema.</p>
+    </div>
+
+    @if (ehAdmin) {
+    <button type="button" class="primary-action" (click)="abrirNovoUsuario()">Novo usuario</button>
+    }
+  </div>
+
+  <app-filtros [titulo]="'Filtrar usuarios'" [campos]="camposFiltro"
+    (filtrosChange)="onFiltrosChange($event)"></app-filtros>
+
+  @if (erroMensagem) {
+  <p class="feedback feedback--erro">{{ erroMensagem }}</p>
+  }
+
+  @if (sucessoMensagem) {
+  <p class="feedback feedback--sucesso">{{ sucessoMensagem }}</p>
+  }
+
+  <app-tabela [colunas]="colunasTabela" [linhas]="linhasTabelaUsuarios" [carregando]="carregando"
+    mensagemCarregando="Carregando usuarios..." mensagemSemDados="Nenhum usuario cadastrado."
+    [acaoEditar]="acaoEditarUsuario" [acaoExcluir]="acaoExcluirUsuario"
+    [excluirDesabilitado]="excluirDesabilitado"></app-tabela>
+</section>
+
+<app-modal [aberto]="modalUsuarioAberto"
+  [titulo]="modoFormulario === 'criar' ? 'Novo usuario' : (usuarioSelecionado?.nome ?? 'Usuario')"
+  [descricao]="modoFormulario === 'criar' ? 'Cadastrar novo acesso' : 'Gerenciamento de usuario'"
+  [modoEdicao]="formularioEmModoEdicao" [mostrarBotaoEditar]="modoFormulario === 'editar' && !modoEdicaoUsuario"
+  (fechar)="fecharModalUsuario()" (editar)="ativarEdicaoUsuario()" (salvar)="salvarUsuario()"
+  (cancelar)="cancelarEdicaoUsuario()">
+  <form class="usuario-form" [formGroup]="formUsuario">
+    <label>
+      <span>Nome</span>
+      <input type="text" formControlName="nome" [readonly]="!formularioEmModoEdicao" />
+      @if (nomeControl?.invalid && nomeControl?.touched) {
+      <small>Informe um nome valido (minimo 3 caracteres).</small>
+      }
+    </label>
+
+    <label>
+      <span>Email</span>
+      <input type="email" formControlName="email" [readonly]="!formularioEmModoEdicao" />
+      @if (emailControl?.invalid && emailControl?.touched) {
+      <small>Informe um email valido.</small>
+      }
+    </label>
+
+    <label>
+      <span>Tipo de usuario</span>
+      <select formControlName="tipo_usuario" [disabled]="!formularioEmModoEdicao">
+        <option value="admin">Administrador</option>
+        <option value="dentista">Dentista</option>
+        <option value="recepcionista">Recepcionista</option>
+      </select>
+    </label>
+
+    <label>
+      <span>{{ modoFormulario === 'criar' ? 'Senha' : 'Nova senha (opcional)' }}</span>
+      <input type="password" formControlName="senha" [readonly]="!formularioEmModoEdicao" />
+      @if (senhaControl?.errors?.['required'] && senhaControl?.touched) {
+      <small>Senha obrigatoria para novo usuario.</small>
+      }
+      @if (senhaControl?.errors?.['minlength'] && senhaControl?.touched) {
+      <small>Senha precisa ter pelo menos 6 caracteres.</small>
+      }
+    </label>
+  </form>
+</app-modal>
+
+<app-modal [aberto]="modalExclusaoAberto" titulo="Excluir usuario" descricao="Acao permanente"
+  [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="false" (fechar)="fecharModalExclusao()">
+  <div class="confirmacao-exclusao">
+    <p>
+      Tem certeza que deseja excluir
+      <strong>{{ usuarioParaExcluir?.nome }}</strong>?
+    </p>
+
+    <div class="confirmacao-exclusao__acoes">
+      <button type="button" class="secondary-action" (click)="fecharModalExclusao()" [disabled]="excluindo">
+        Cancelar
+      </button>
+      <button type="button" class="danger-action" (click)="confirmarExclusaoUsuario()" [disabled]="excluindo">
+        {{ excluindo ? 'Excluindo...' : 'Excluir usuario' }}
+      </button>
+    </div>
+  </div>
+</app-modal>

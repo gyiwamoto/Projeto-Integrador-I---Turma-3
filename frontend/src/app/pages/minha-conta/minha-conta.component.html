@@ -1,0 +1,164 @@
+<main class="conta-main">
+      <h1>Minha conta</h1>
+      <p class="descricao">Atualize seus dados de acesso.</p>
+
+      @if (tipoUsuario) {
+      <p class="perfil">Perfil atual: {{ tipoUsuario }}</p>
+      }
+
+      <form [formGroup]="formConta" (ngSubmit)="salvar()">
+        <label for="nome">Nome</label>
+        <input id="nome" type="text" formControlName="nome" maxlength="120" />
+
+        <label for="email">Email</label>
+        <input id="email" type="email" formControlName="email" />
+
+        <button type="button" class="botao-alterar-senha" (click)="alternarSecaoSenha()">
+          {{ mostraSecaoSenha ? 'Ocultar Senha ?' : 'Alterar Senha ?' }}
+        </button>
+
+        @if (mostraSecaoSenha) {
+        <section class="senha-bloco">
+          <h2>Alterar senha</h2>
+
+          <label for="senhaNova">Nova senha</label>
+          <div class="campo-senha">
+            <input id="senhaNova" [type]="mostrarSenhaNova ? 'text' : 'password'" formControlName="senhaNova"
+              autocomplete="new-password" placeholder="Sua nova senha" />
+            <button type="button" class="botao-olho" (click)="alternarVisualizacaoSenhaNova()"
+              [attr.aria-label]="mostrarSenhaNova ? 'Ocultar senha' : 'Mostrar senha'"
+              [attr.aria-pressed]="mostrarSenhaNova">
+              @if (mostrarSenhaNova) {
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 3l18 18" />
+                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                <path d="M9.9 5.2A10.6 10.6 0 0 1 12 5c5.3 0 9.1 3.6 10 7-0.4 1.5-1.4 3.2-2.9 4.6" />
+                <path d="M6.2 6.3C4.1 7.7 2.7 9.9 2 12c0.9 3.4 4.7 7 10 7 1.9 0 3.6-0.4 5-1.2" />
+              </svg>
+              } @else {
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M2 12c0.9-3.4 4.7-7 10-7s9.1 3.6 10 7c-0.9 3.4-4.7 7-10 7s-9.1-3.6-10-7z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              }
+            </button>
+          </div>
+
+          <label for="senhaConfirmacao">Confirmar nova senha</label>
+          <div class="campo-senha">
+            <input id="senhaConfirmacao" [type]="mostrarSenhaConfirmacao ? 'text' : 'password'"
+              formControlName="senhaConfirmacao" autocomplete="new-password" placeholder="Confirme a nova senha" />
+            <button type="button" class="botao-olho" (click)="alternarVisualizacaoSenhaConfirmacao()"
+              [attr.aria-label]="mostrarSenhaConfirmacao ? 'Ocultar senha' : 'Mostrar senha'"
+              [attr.aria-pressed]="mostrarSenhaConfirmacao">
+              @if (mostrarSenhaConfirmacao) {
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 3l18 18" />
+                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                <path d="M9.9 5.2A10.6 10.6 0 0 1 12 5c5.3 0 9.1 3.6 10 7-0.4 1.5-1.4 3.2-2.9 4.6" />
+                <path d="M6.2 6.3C4.1 7.7 2.7 9.9 2 12c0.9 3.4 4.7 7 10 7 1.9 0 3.6-0.4 5-1.2" />
+              </svg>
+              } @else {
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M2 12c0.9-3.4 4.7-7 10-7s9.1 3.6 10 7c-0.9 3.4-4.7 7-10 7s-9.1-3.6-10-7z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              }
+            </button>
+          </div>
+
+          <button class="submit-button" type="submit" [disabled]="!podeSalvar || salvandoSenha">
+            {{ salvandoSenha ? 'Salvando...' : 'Salvar alteracoes' }}
+          </button>
+        </section>
+        } @else {
+        <button class="submit-button" type="submit" [disabled]="!podeSalvar || salvandoSenha">
+          {{ salvandoSenha ? 'Salvando...' : 'Salvar alteracoes' }}
+        </button>
+        }
+      </form>
+
+      @if (exibirMeusAgendamentos) {
+      <div class="tabela-wrapper">
+        <h2>Meus agendamentos</h2>
+        <table class="tabela-dados">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Paciente</th>
+              <th>Profissional</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (carregandoAgendamentos) {
+            <tr>
+              <td colspan="4">Carregando agendamentos...</td>
+            </tr>
+            } @else {
+              @for (consulta of listaAgendamentosMinhaConta; track consulta.id) {
+              <tr>
+                <td>{{ formatarDataConsulta(consulta.dataConsulta) }}</td>
+                <td>{{ consulta.pacienteNome }}</td>
+                <td>{{ consulta.profissionalNome }}</td>
+                <td>{{ formatarStatus(consulta.status) }}</td>
+              </tr>
+              } @empty {
+              <tr>
+                <td colspan="4">Nenhum agendamento encontrado.</td>
+              </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      }
+
+      @if (mostraModalSenhaAtual) {
+      <div class="modal-overlay" role="presentation">
+        <div class="modal-senha" role="dialog" aria-modal="true" aria-labelledby="confirmacaoSenhaTitulo">
+          <h3 id="confirmacaoSenhaTitulo">Confirmar alteracao</h3>
+          <p>Digite sua senha atual para concluir a alteracao.</p>
+
+          <form [formGroup]="formSenhaAtual" (ngSubmit)="confirmarTrocaSenha()">
+            <label for="senhaAtual">Senha atual</label>
+            <div class="campo-senha">
+              <input id="senhaAtual" [type]="mostrarSenhaAtual ? 'text' : 'password'" formControlName="senhaAtual"
+                autocomplete="current-password" placeholder="Sua senha atual" />
+              <button type="button" class="botao-olho" (click)="alternarVisualizacaoSenhaAtual()"
+                [attr.aria-label]="mostrarSenhaAtual ? 'Ocultar senha' : 'Mostrar senha'"
+                [attr.aria-pressed]="mostrarSenhaAtual">
+                @if (mostrarSenhaAtual) {
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 3l18 18" />
+                  <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                  <path d="M9.9 5.2A10.6 10.6 0 0 1 12 5c5.3 0 9.1 3.6 10 7-0.4 1.5-1.4 3.2-2.9 4.6" />
+                  <path d="M6.2 6.3C4.1 7.7 2.7 9.9 2 12c0.9 3.4 4.7 7 10 7 1.9 0 3.6-0.4 5-1.2" />
+                </svg>
+                } @else {
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12c0.9-3.4 4.7-7 10-7s9.1 3.6 10 7c-0.9 3.4-4.7 7-10 7s-9.1-3.6-10-7z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                }
+              </button>
+            </div>
+
+            <div class="modal-acoes">
+              <button type="button" class="botao-secundario" (click)="fecharModalSenhaAtual()"
+                [disabled]="salvandoSenha">
+                Cancelar
+              </button>
+              <button type="submit" class="botao-principal" [disabled]="formSenhaAtual.invalid || salvandoSenha">
+                @if (salvandoSenha) {
+                Salvando...
+                } @else {
+                Confirmar troca
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      }
+</main>
