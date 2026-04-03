@@ -4,6 +4,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo.frontend.app.json",
     "types": []
   },
   "include": ["src/**/*.ts"],

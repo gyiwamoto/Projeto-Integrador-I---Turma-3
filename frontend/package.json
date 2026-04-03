@@ -1,16 +1,18 @@
 {
   "name": "dentista-organizado",
-  "version": "0.0.0",
+  "version": "1.0.0-rc.2",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:proxy": "ng serve --proxy-config proxy.conf.json",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "type-check": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json"
   },
   "private": true,
   "engines": {
-    "node": "24.x"
+    "node": "22.x"
   },
   "packageManager": "npm@10.5.0",
   "dependencies": {
@@ -20,6 +22,8 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "chart.js": "^4.5.1",
+    "dentista-organizado-workspace": "file:..",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

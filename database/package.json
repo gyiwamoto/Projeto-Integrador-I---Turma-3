@@ -1,6 +1,12 @@
 {
+  "name": "dentistas-database",
+  "version": "1.0.0-rc.2",
+  "scripts": {
+    "db:populate:dev": "node ./scripts/db-populate-dev.mjs"
+  },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
+    "dentista-organizado-workspace": "file:..",
     "dotenv": "^17.3.1",
     "pg": "^8.20.0"
   }
