@@ -2,6 +2,13 @@
 
 Esta pasta guarda as migrations SQL versionadas do projeto.
 
+## Status atual
+
+- Versao: `1.0.0`
+- Migrations disponiveis: `001` ate `009`
+- Estrutura principal do dominio clinico ja criada (usuarios, pacientes, convenios, tratamentos, consultas, procedimentos e logs).
+- Proximas etapas incluem ajustes de performance, mais seeds para homologacao e evolucoes para relatorios gerenciais.
+
 ## Estrutura atual
 
 ```
@@ -15,6 +22,7 @@ database/
 |  |- 006_tabela_consultas.sql
 |  |- 007_tabela_procedimentos_realizados.sql
 |  |- 008_tabela_logs_acessos.sql
+|  |- 009_codigo_paciente_autoincremento.sql
 |- scripts/
 |  |- db-migrate-all.mjs
 |  |- db-run-sql.mjs
@@ -102,6 +110,11 @@ Tabela de cadastro dos pacientes da clinica.
 - convenio_id (FK convenios)
 - numero_carteirinha
 - criado_em
+
+Observacao:
+
+- A migration `009_codigo_paciente_autoincremento.sql` cria a sequencia `pacientes_codigo_seq`
+	e configura `codigo_paciente` com `DEFAULT` no formato `P00001`.
 
 ### convenios
 

@@ -1,6 +1,6 @@
 {
   "name": "dentistas-database",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0",
   "scripts": {
     "db:populate:dev": "node ./scripts/db-populate-dev.mjs"
   },

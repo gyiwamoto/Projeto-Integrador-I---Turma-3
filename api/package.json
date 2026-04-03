@@ -1,6 +1,6 @@
 {
   "name": "vercel-functions-api",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json && node -e \"require('fs').mkdirSync('public',{recursive:true})\"",

@@ -2,6 +2,13 @@
 
 Esta pasta contem o backend do projeto, usando funcoes serverless da Vercel.
 
+## Status atual
+
+- Versao: `1.0.0`
+- Endpoints ativos para autenticacao e modulos principais (usuarios, pacientes, convenios, consultas, tratamentos e procedimentos realizados).
+- Base preparada para execucao local via `vercel dev`.
+- Parte dos fluxos ainda utiliza dados mockados no frontend e sera substituida por integracoes completas nas proximas iteracoes.
+
 ## Estrutura atual
 
 ```text
@@ -16,11 +23,11 @@ api/
 |- pacientes/
 |  |- index.ts     # /api/pacientes (GET, POST, PUT, DELETE)
 |- convenios/
-|  |- index.ts     # /api/convenios (GET)
+|  |- index.ts     # /api/convenios (GET, POST, PUT, DELETE)
 |- consultas/
 |  |- index.ts     # /api/consultas (GET)
 |- tratamentos/
-|  |- index.ts     # /api/tratamentos (GET)
+|  |- index.ts     # /api/tratamentos (GET, POST, PUT, DELETE)
 |- procedimentos-realizados/
 |  |- index.ts     # /api/procedimentos-realizados (GET)
 |- usuarios/
@@ -42,9 +49,20 @@ api/
 - `PUT /api/pacientes?id=<id>`: edita paciente (autenticado)
 - `DELETE /api/pacientes?id=<id>`: deleta paciente (admin)
 - `GET /api/convenios`: lista convenios (autenticado)
+- `POST /api/convenios`: cria convenio (autenticado)
+- `PUT /api/convenios?id=<id>`: edita convenio (autenticado)
+- `DELETE /api/convenios?id=<id>`: deleta convenio (admin)
 - `GET /api/consultas`: lista consultas (autenticado)
 - `GET /api/tratamentos`: lista tratamentos (autenticado)
+- `POST /api/tratamentos`: cria tratamento (autenticado)
+- `PUT /api/tratamentos?id=<id>`: edita tratamento (autenticado)
+- `DELETE /api/tratamentos?id=<id>`: deleta tratamento (admin)
 - `GET /api/procedimentos-realizados`: lista procedimentos realizados (autenticado)
+
+### Pacientes: codigo gerado no servidor
+
+- A coluna `codigo_paciente` possui `DEFAULT` no banco (migration `009_codigo_paciente_autoincremento.sql`).
+- O backend rejeita `codigo_paciente` enviado no body de criacao.
 
 ## Controle de Acesso (RBAC)
 
