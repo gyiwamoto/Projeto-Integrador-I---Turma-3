@@ -1,7 +1,10 @@
-import type { VercelRequest } from '@vercel/node';
 import type { JwtPayload, SignOptions } from 'jsonwebtoken';
 import type { JwtUsuarioPayload, TipoUsuario } from './types';
 import pool from './db';
+
+interface RequestComAutenticacao {
+  headers: Record<string, string | string[] | undefined>;
+}
 
 interface JwtTokenClaims extends JwtUsuarioPayload {
   sub: string;
@@ -120,6 +123,14 @@ function parseCookies(cookieHeader: string | undefined): Record<string, string> 
   }, {});
 }
 
+function extrairPrimeiroHeader(valor: string | string[] | undefined): string | undefined {
+  if (Array.isArray(valor)) {
+    return valor[0];
+  }
+
+  return valor;
+}
+
 function extrairTokenDoCookie(cookieHeader: string | undefined): string {
   const cookies = parseCookies(cookieHeader);
   const token = cookies[authCookieName];
@@ -174,10 +185,11 @@ export function verificarAccessToken(token: string): JwtUsuarioPayload {
   };
 }
 
-export async function autenticarRequisicao(req: VercelRequest): Promise<JwtUsuarioPayload> {
-  const token = req.headers.authorization
-    ? extrairBearerToken(req.headers.authorization)
-    : extrairTokenDoCookie(req.headers.cookie);
+export async function autenticarRequisicao(req: RequestComAutenticacao): Promise<JwtUsuarioPayload> {
+  const authorization = extrairPrimeiroHeader(req.headers.authorization);
+  const cookie = extrairPrimeiroHeader(req.headers.cookie);
+
+  const token = authorization ? extrairBearerToken(authorization) : extrairTokenDoCookie(cookie);
 
   const usuarioToken = verificarAccessToken(token);
 
