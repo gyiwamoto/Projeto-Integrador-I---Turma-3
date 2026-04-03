@@ -26,7 +26,7 @@ describe('/api/convenios', () => {
   it('retorna 405 quando o metodo nao e suportado', async () => {
     const { default: handler } = await import('./index');
     const { res, state } = createMockRes();
-    const req = createMockReq({ method: 'POST' });
+    const req = createMockReq({ method: 'PATCH' });
 
     await handler(req, res);
 
