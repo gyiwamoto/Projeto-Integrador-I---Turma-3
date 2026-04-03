@@ -16,7 +16,7 @@ interface ProcedimentoRealizadoListagem {
 
 export async function listarProcedimentosRealizados(req: VercelRequest, res: VercelResponse) {
   try {
-    autenticarRequisicao(req);
+    await autenticarRequisicao(req);
   } catch (error) {
     if (error instanceof AuthError) {
       return res.status(error.statusCode).json({ erro: error.message });

@@ -1,5 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { AuthError, autenticarRequisicao, criarCookieSessao, criarCookieSessaoEncerrada, gerarAccessToken } from '../api/_lib/auth';
+import {
+  AuthError,
+  autenticarRequisicao,
+  criarCookieSessao,
+  criarCookieSessaoEncerrada,
+  gerarAccessToken,
+} from '../api/_lib/auth';
 import { validarSenha } from '../api/_lib/password';
 import type { TipoUsuario } from '../api/_lib/types';
 import { registrarLogFalha, registrarLogSucesso } from './logsAcessos.service';
@@ -73,6 +79,10 @@ export async function autenticarLogin(req: VercelRequest, res: VercelResponse) {
     }
 
     const usuario = resultado.rows[0];
+    if (!usuario) {
+      throw new AuthError('Credenciais invalidas.');
+    }
+
     const senhaValida = await validarSenha(senha, usuario.senha_hash);
 
     if (!senhaValida) {
@@ -80,7 +90,7 @@ export async function autenticarLogin(req: VercelRequest, res: VercelResponse) {
     }
 
     const token = gerarAccessToken({
-      id: usuario.id,
+      id: String(usuario.id),
       nome: usuario.nome,
       email: usuario.email,
       tipo_usuario: usuario.tipo_usuario,
@@ -146,7 +156,7 @@ export async function autenticarLogin(req: VercelRequest, res: VercelResponse) {
 
 export async function obterSessaoAutenticada(req: VercelRequest, res: VercelResponse) {
   try {
-    const usuario = autenticarRequisicao(req);
+    const usuario = await autenticarRequisicao(req);
 
     await registrarLogSucesso({
       req,
@@ -186,7 +196,7 @@ export async function logout(req: VercelRequest, res: VercelResponse) {
   let emailInformado: string | undefined;
 
   try {
-    const usuario = autenticarRequisicao(req);
+    const usuario = await autenticarRequisicao(req);
     usuarioId = usuario.id;
     emailInformado = usuario.email;
   } catch {

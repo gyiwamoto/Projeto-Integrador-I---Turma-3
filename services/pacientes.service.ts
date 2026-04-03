@@ -40,6 +40,13 @@ interface EditarPacienteBody {
   numero_carteirinha?: string;
 }
 
+interface ErroBancoDados {
+  code?: string;
+  column?: string;
+  constraint?: string;
+  message?: string;
+}
+
 function extrairIdDaUrl(req: VercelRequest): string {
   const { id } = req.query;
 
@@ -52,7 +59,7 @@ function extrairIdDaUrl(req: VercelRequest): string {
 
 export async function listarPacientes(req: VercelRequest, res: VercelResponse) {
   try {
-    autenticarRequisicao(req);
+    await autenticarRequisicao(req);
   } catch (error) {
     if (error instanceof AuthError) {
       return res.status(error.statusCode).json({ erro: error.message });
@@ -89,7 +96,7 @@ export async function criarPaciente(req: VercelRequest, res: VercelResponse) {
   let emailInformado: string | undefined;
 
   try {
-    const usuarioLogado = autenticarRequisicao(req);
+    const usuarioLogado = await autenticarRequisicao(req);
     usuarioId = usuarioLogado.id;
     emailInformado = usuarioLogado.email;
   } catch (error) {
@@ -192,10 +199,24 @@ export async function criarPaciente(req: VercelRequest, res: VercelResponse) {
       rotaPadrao: '/api/pacientes',
     });
 
+    const pacienteCriado = resultado.rows[0];
+    if (!pacienteCriado) {
+      await registrarLogFalha({
+        req,
+        usuarioId,
+        emailInformado,
+        statusHttp: 500,
+        mensagem: 'Erro ao recuperar paciente criado.',
+        rotaPadrao: '/api/pacientes',
+      });
+
+      return res.status(500).json({ erro: 'Erro ao recuperar paciente criado.' });
+    }
+
     return res.status(201).json({
       mensagem: 'Paciente criado com sucesso.',
-      codigo_paciente: resultado.rows[0].codigo_paciente,
-      paciente: resultado.rows[0],
+      codigo_paciente: pacienteCriado.codigo_paciente,
+      paciente: pacienteCriado,
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -211,7 +232,9 @@ export async function criarPaciente(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ erro: 'Corpo da requisicao invalido.' });
     }
 
-    if (error instanceof Error && error.message.includes('unique constraint')) {
+    const erroBanco = error as ErroBancoDados;
+
+    if (erroBanco.code === '23505' || (error instanceof Error && error.message.includes('unique constraint'))) {
       await registrarLogFalha({
         req,
         usuarioId,
@@ -222,6 +245,51 @@ export async function criarPaciente(req: VercelRequest, res: VercelResponse) {
       });
 
       return res.status(409).json({ erro: 'Codigo de paciente ou email ja cadastrado.' });
+    }
+
+    if (erroBanco.code === '23503' && erroBanco.constraint === 'fk_pacientes_convenios') {
+      await registrarLogFalha({
+        req,
+        usuarioId,
+        emailInformado,
+        statusHttp: 400,
+        mensagem: 'Convenio informado nao existe.',
+        rotaPadrao: '/api/pacientes',
+      });
+
+      return res.status(400).json({ erro: 'Convenio informado nao existe.' });
+    }
+
+    if (erroBanco.code === '22P02') {
+      await registrarLogFalha({
+        req,
+        usuarioId,
+        emailInformado,
+        statusHttp: 400,
+        mensagem: 'Formato invalido em algum campo enviado.',
+        rotaPadrao: '/api/pacientes',
+      });
+
+      return res.status(400).json({ erro: 'Formato invalido em algum campo enviado.' });
+    }
+
+    if (
+      erroBanco.code === '23502' &&
+      (erroBanco.column === 'codigo_paciente' ||
+        (typeof erroBanco.message === 'string' && erroBanco.message.includes('codigo_paciente')))
+    ) {
+      await registrarLogFalha({
+        req,
+        usuarioId,
+        emailInformado,
+        statusHttp: 500,
+        mensagem: 'Configuracao de banco incompleta para gerar codigo_paciente. Rode as migrations pendentes.',
+        rotaPadrao: '/api/pacientes',
+      });
+
+      return res.status(500).json({
+        erro: 'Configuracao de banco incompleta para gerar codigo_paciente. Rode as migrations pendentes.',
+      });
     }
 
     await registrarLogFalha({
@@ -241,7 +309,7 @@ export async function editarPaciente(req: VercelRequest, res: VercelResponse) {
   let id: string;
   try {
     id = extrairIdDaUrl(req);
-    autenticarRequisicao(req);
+    await autenticarRequisicao(req);
   } catch (error) {
     if (error instanceof AuthError) {
       return res.status(error.statusCode).json({ erro: error.message });
@@ -346,7 +414,7 @@ export async function deletarPaciente(req: VercelRequest, res: VercelResponse) {
   let id: string;
   try {
     id = extrairIdDaUrl(req);
-    const usuarioLogado = autenticarRequisicao(req);
+    const usuarioLogado = await autenticarRequisicao(req);
     verificarPermissaoDeletar(usuarioLogado);
   } catch (error) {
     if (error instanceof AuthError) {
