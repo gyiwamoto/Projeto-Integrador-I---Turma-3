@@ -19,6 +19,7 @@ import {
 import { AuthService } from '../../services/auth.service';
 import { CriarUsuarioPayload, TipoUsuario, UsuarioListaItem } from '../../interfaces/Usuario';
 import { UsuariosService } from '../../services/usuarios.service';
+import { formatarData } from '../../utils/formatar-data';
 
 type ModoFormularioUsuario = 'criar' | 'editar';
 
@@ -47,7 +48,7 @@ export class UsuariosPage implements OnInit {
     {
       chave: 'criado_em',
       titulo: 'Criado em',
-      formatador: (valor) => this.formatarData(valor),
+      formatador: (valor) => formatarData(valor),
     },
   ];
 
@@ -138,6 +139,7 @@ export class UsuariosPage implements OnInit {
     return this.usuariosFiltrados.map((usuario) => ({
       ...usuario,
       ativo: this.usuarioEstaAtivo(usuario),
+      tipo_usuario: usuario.tipo_usuario,
     })) as unknown as TabelaLinha[];
   }
 
@@ -175,6 +177,7 @@ export class UsuariosPage implements OnInit {
       senha: '',
       tipo_usuario: 'recepcionista',
     });
+    this.atualizarEstadoFormularioEdicao();
   }
 
   abrirEdicaoUsuario(usuario: UsuarioListaItem): void {
@@ -191,6 +194,7 @@ export class UsuariosPage implements OnInit {
       senha: '',
       tipo_usuario: usuario.tipo_usuario,
     });
+    this.atualizarEstadoFormularioEdicao();
   }
 
   ativarEdicaoUsuario(): void {
@@ -200,6 +204,7 @@ export class UsuariosPage implements OnInit {
 
     this.modoEdicaoUsuario = true;
     this.configurarValidacaoSenha(false);
+    this.atualizarEstadoFormularioEdicao();
   }
 
   cancelarEdicaoUsuario(): void {
@@ -221,6 +226,7 @@ export class UsuariosPage implements OnInit {
       senha: '',
       tipo_usuario: this.usuarioSelecionado.tipo_usuario,
     });
+    this.atualizarEstadoFormularioEdicao();
   }
 
   salvarUsuario(): void {
@@ -271,6 +277,7 @@ export class UsuariosPage implements OnInit {
       tipo_usuario: 'recepcionista',
     });
     this.configurarValidacaoSenha(true);
+    this.atualizarEstadoFormularioEdicao();
   }
 
   fecharModalExclusao(): void {
@@ -289,35 +296,16 @@ export class UsuariosPage implements OnInit {
 
     this.usuariosService.excluirUsuario(this.usuarioParaExcluir.id).subscribe({
       next: (resposta) => {
-        this.usuarios = this.usuarios.filter(
-          (usuario) => usuario.id !== this.usuarioParaExcluir?.id,
-        );
         this.sucessoMensagem = resposta.mensagem;
         this.fecharModalExclusao();
         this.excluindo = false;
+        this.sincronizarUsuariosComCache();
       },
       error: (error: Error) => {
         this.excluindo = false;
         this.erroMensagem = error.message || 'Nao foi possivel excluir o usuario.';
       },
     });
-  }
-
-  formatarData(valor: unknown): string {
-    if (typeof valor !== 'string' || !valor.trim()) {
-      return '-';
-    }
-
-    const data = new Date(valor);
-
-    if (Number.isNaN(data.getTime())) {
-      return valor;
-    }
-
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(data);
   }
 
   private carregarUsuarios(): void {
@@ -341,6 +329,10 @@ export class UsuariosPage implements OnInit {
       });
   }
 
+  private sincronizarUsuariosComCache(): void {
+    this.usuarios = this.usuariosService.obterUsuariosEmCache();
+  }
+
   private salvarNovoUsuario(payload: CriarUsuarioPayload): void {
     this.salvando = true;
     this.erroMensagem = '';
@@ -351,7 +343,7 @@ export class UsuariosPage implements OnInit {
         this.sucessoMensagem = resposta.mensagem;
         this.salvando = false;
         this.fecharModalUsuario();
-        void this.carregarUsuarios();
+        this.sincronizarUsuariosComCache();
       },
       error: (error: Error) => {
         this.salvando = false;
@@ -361,7 +353,7 @@ export class UsuariosPage implements OnInit {
   }
 
   private salvarEdicaoUsuario(
-    usuarioId: number,
+    usuarioId: string,
     payload: {
       nome: string;
       email: string;
@@ -378,7 +370,7 @@ export class UsuariosPage implements OnInit {
         this.sucessoMensagem = resposta.mensagem;
         this.salvando = false;
         this.fecharModalUsuario();
-        void this.carregarUsuarios();
+        this.sincronizarUsuariosComCache();
       },
       error: (error: Error) => {
         this.salvando = false;
@@ -401,6 +393,15 @@ export class UsuariosPage implements OnInit {
     }
 
     senha.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private atualizarEstadoFormularioEdicao(): void {
+    if (this.formularioEmModoEdicao) {
+      this.formUsuario.enable({ emitEvent: false });
+      return;
+    }
+
+    this.formUsuario.disable({ emitEvent: false });
   }
 
   private senhaOpcionalOuObrigatoriaValidator(): ValidatorFn {

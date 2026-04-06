@@ -1,8 +1,8 @@
 -- Migracao 003: cria a tabela de convenios
 
 CREATE TABLE IF NOT EXISTS convenios (
-	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-	nome VARCHAR(120) NOT NULL UNIQUE,
+	cnpj VARCHAR(18) PRIMARY KEY,
+	nome VARCHAR(120) NOT NULL,
 	ativo BOOLEAN NOT NULL DEFAULT TRUE,
 	criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 	atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()

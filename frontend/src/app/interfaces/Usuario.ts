@@ -1,14 +1,14 @@
 export type TipoUsuario = 'admin' | 'dentista' | 'recepcionista';
 
 export interface UsuarioAutenticado {
-  id: number;
+  id: string;
   nome: string;
   email: string;
   tipo_usuario: TipoUsuario;
 }
 
 export interface UsuarioListaItem {
-  id: number;
+  id: string;
   nome: string;
   email: string;
   tipo_usuario: TipoUsuario;

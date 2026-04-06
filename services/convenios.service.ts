@@ -5,6 +5,7 @@ import pool from '../api/_lib/db';
 interface ConvenioListagem {
   id: string;
   nome: string;
+  cnpj: string | null;
   ativo: boolean;
   atualizado_em: string;
   criado_em: string;
@@ -12,6 +13,7 @@ interface ConvenioListagem {
 
 interface ConvenioBody {
   nome?: string;
+  cnpj?: string;
   ativo?: boolean;
 }
 
@@ -44,7 +46,7 @@ export async function listarConvenios(req: VercelRequest, res: VercelResponse) {
   }
 
   const resultado = await pool.query<ConvenioListagem>(
-    'SELECT id, nome, ativo, atualizado_em FROM convenios ORDER BY nome ASC',
+    'SELECT cnpj AS id, nome, cnpj, ativo, atualizado_em, criado_em FROM convenios ORDER BY nome ASC',
   );
 
   return res.status(200).json({
@@ -73,13 +75,19 @@ export async function criarConvenio(req: VercelRequest, res: VercelResponse) {
     }
 
     const nome = body.nome.trim();
+    const cnpj = typeof body.cnpj === 'string' ? body.cnpj.trim() : '';
+
+    if (!cnpj) {
+      return res.status(400).json({ erro: 'CNPJ do convenio eh obrigatorio.' });
+    }
+
     const ativo = body.ativo ?? true;
 
     const resultado = await pool.query<ConvenioListagem>(
-      `INSERT INTO convenios (nome, ativo)
-       VALUES ($1, $2)
-       RETURNING id, nome, ativo, criado_em, atualizado_em`,
-      [nome, ativo],
+      `INSERT INTO convenios (nome, cnpj, ativo)
+       VALUES ($1, $2, $3)
+       RETURNING cnpj AS id, nome, cnpj, ativo, criado_em, atualizado_em`,
+      [nome, cnpj, ativo],
     );
 
     if (resultado.rowCount !== 1) {
@@ -104,10 +112,10 @@ export async function criarConvenio(req: VercelRequest, res: VercelResponse) {
 }
 
 export async function editarConvenio(req: VercelRequest, res: VercelResponse) {
-  let id: string;
+  let cnpjAtual: string;
 
   try {
-    id = extrairIdDaUrl(req);
+    cnpjAtual = extrairIdDaUrl(req);
     const usuario = await autenticarRequisicao(req);
     verificarAdminAutorizado(usuario);
   } catch (error) {
@@ -130,6 +138,14 @@ export async function editarConvenio(req: VercelRequest, res: VercelResponse) {
       campos.push({ chave: 'nome', valor: body.nome.trim() });
     }
 
+    if (body.cnpj !== undefined) {
+      const cnpjNovo = typeof body.cnpj === 'string' ? body.cnpj.trim() : '';
+      if (!cnpjNovo) {
+        return res.status(400).json({ erro: 'CNPJ do convenio nao pode ser vazio.' });
+      }
+      campos.push({ chave: 'cnpj', valor: cnpjNovo });
+    }
+
     if (body.ativo !== undefined) {
       campos.push({ chave: 'ativo', valor: Boolean(body.ativo) });
     }
@@ -146,9 +162,9 @@ export async function editarConvenio(req: VercelRequest, res: VercelResponse) {
     const resultado = await pool.query<ConvenioListagem>(
       `UPDATE convenios
           SET ${setClauses}
-        WHERE id = $${campos.length + 1}
-      RETURNING id, nome, ativo, criado_em, atualizado_em`,
-      [...valores, id],
+        WHERE cnpj = $${campos.length + 1}
+      RETURNING cnpj AS id, nome, cnpj, ativo, criado_em, atualizado_em`,
+      [...valores, cnpjAtual],
     );
 
     if (resultado.rowCount !== 1) {
@@ -173,10 +189,10 @@ export async function editarConvenio(req: VercelRequest, res: VercelResponse) {
 }
 
 export async function deletarConvenio(req: VercelRequest, res: VercelResponse) {
-  let id: string;
+  let cnpj: string;
 
   try {
-    id = extrairIdDaUrl(req);
+    cnpj = extrairIdDaUrl(req);
     const usuario = await autenticarRequisicao(req);
     verificarAdminAutorizado(usuario);
   } catch (error) {
@@ -187,7 +203,7 @@ export async function deletarConvenio(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ erro: 'Requer autenticacao.' });
   }
 
-  const resultado = await pool.query('DELETE FROM convenios WHERE id = $1', [id]);
+  const resultado = await pool.query('DELETE FROM convenios WHERE cnpj = $1', [cnpj]);
 
   if (resultado.rowCount !== 1) {
     return res.status(404).json({ erro: 'Convenio nao encontrado.' });

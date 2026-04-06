@@ -13,6 +13,7 @@ import {
   TratamentoItem,
   TratamentosService,
 } from '../../services/tratamentos.service';
+import { formatarData } from '../../utils/formatar-data';
 
 type ModoFormularioTratamento = 'criar' | 'editar';
 
@@ -47,7 +48,7 @@ export class TratamentosPage implements OnInit {
     {
       chave: 'atualizado_em',
       titulo: 'Atualizado em',
-      formatador: (valor) => this.formatarData(valor),
+      formatador: (valor) => formatarData(valor),
     },
   ];
 
@@ -227,29 +228,13 @@ export class TratamentosPage implements OnInit {
     this.tratamentoSelecionado = null;
   }
 
-  formatarData(valor: unknown): string {
-    if (typeof valor !== 'string' || !valor.trim()) {
-      return '-';
-    }
-
-    const data = new Date(valor);
-    if (Number.isNaN(data.getTime())) {
-      return valor;
-    }
-
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(data);
-  }
-
   private carregarTratamentos(): void {
     this.carregando = true;
     this.erroMensagem = '';
 
     this.tratamentosService.listarTratamentos().subscribe({
       next: (resposta) => {
-        this.tratamentos = resposta.tratamentos;
+        this.tratamentos = Array.isArray(resposta?.tratamentos) ? resposta.tratamentos : [];
         this.carregando = false;
       },
       error: (error: Error) => {

@@ -41,7 +41,8 @@
 
         <label>
           <span>Data de nascimento</span>
-          <input type="date" formControlName="dataNascimento" />
+          <input type="text" formControlName="dataNascimento" placeholder="DD/MM/AAAA" maxlength="10"
+            (input)="onDataNascimentoInput($event)" />
         </label>
 
         <label>
@@ -59,8 +60,8 @@
           <span>Convenio</span>
           <select formControlName="convenioId">
             <option value="">Particular</option>
-            @for (convenio of convenios; track convenio.id) {
-            <option [value]="convenio.id">{{ convenio.nome }}</option>
+            @for (convenio of convenios; track convenio.cnpj) {
+            <option [value]="convenio.cnpj">{{ convenio.nome }}</option>
             }
           </select>
         </label>
@@ -75,8 +76,78 @@
       <div class="patient-modal__actions">
         <button type="button" class="secondary-action" (click)="agendarNovaConsulta()">Agendar consulta</button>
       </div>
+
+      <section class="consultations-block">
+        <div class="consultations-block__header">
+          <div>
+            <span class="section-label">Historico</span>
+            <h3>Consultas do paciente</h3>
+          </div>
+        </div>
+
+        <app-tabela [colunas]="colunasConsultasPaciente" [linhas]="linhasConsultasPaciente"
+          mensagemSemDados="Nenhuma consulta cadastrada para este paciente." rotuloEditar="Detalhes"
+          [acaoEditar]="acaoDetalharConsultaPaciente" [mostrarColunaExcluir]="false"></app-tabela>
+      </section>
       }
     </form>
+  </div>
+</app-modal>
+
+<app-modal [aberto]="consultaDetalheAberto" titulo="Detalhes da consulta" descricao="Historico clinico"
+  [mostrarBotaoEditar]="false" (fechar)="fecharConsultaDetalhe()">
+  <div class="consulta-detalhe" *ngIf="consultaSelecionada">
+    <div class="consulta-meta">
+      <p><strong>Paciente:</strong> {{ consultaSelecionada.pacienteNome }}</p>
+      <p><strong>Profissional:</strong> {{ consultaSelecionada.profissionalNome }}</p>
+      <p><strong>Data:</strong> {{ consultaSelecionada.dataConsulta | date:'dd/MM/yyyy HH:mm' }}</p>
+      <p><strong>Status:</strong> {{ consultaSelecionada.status | titlecase }}</p>
+      <p><strong>Convenio:</strong> {{ consultaSelecionada.convenioNome ?? '-' }}</p>
+      <p><strong>Carteirinha:</strong> {{ consultaSelecionada.numeroCarteirinha ?? '-' }}</p>
+    </div>
+
+    <div class="consulta-detalhe__bloco">
+      <span class="section-label">Observacoes</span>
+      <p>{{ consultaSelecionada.observacoes ?? 'Sem observacoes registradas.' }}</p>
+    </div>
+
+    <div class="consulta-detalhe__bloco">
+      <div class="consultations-block__header">
+        <div>
+          <span class="section-label">Odontograma</span>
+          <h3>Procedimentos por dente</h3>
+        </div>
+      </div>
+
+      <div class="odontograma-grid">
+        @for (dente of dentesOdontograma; track dente) {
+        <article class="odontograma-tooth">
+          <strong>{{ dente }}</strong>
+          <div class="odontograma-faces">
+            @for (face of facesOdontograma; track face.codigo) {
+            <span [class.is-active]="possuiProcedimentoNoDenteFace(dente, face.codigo)">
+              {{ face.codigo }}
+            </span>
+            }
+          </div>
+        </article>
+        }
+      </div>
+    </div>
+
+    <div class="consulta-detalhe__bloco">
+      <span class="section-label">Procedimentos</span>
+      <app-tabela [colunas]="colunasProcedimentosConsulta" [linhas]="procedimentosConsultaSelecionada"
+        [carregando]="carregandoProcedimentos" mensagemCarregando="Carregando procedimentos..."
+        mensagemSemDados="Nenhum procedimento registrado nesta consulta." [mostrarColunaEditar]="false"
+        [mostrarColunaExcluir]="false"></app-tabela>
+    </div>
+
+    <div class="consulta-detalhe__acoes">
+      <button type="button" class="secondary-action" (click)="irParaAtendimento(consultaSelecionada)">
+        Abrir atendimento
+      </button>
+    </div>
   </div>
 </app-modal>
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { AgendaComponent } from './agenda.component';
 import { AgendaService } from '../../services/agenda.service';
@@ -20,6 +20,13 @@ describe('AgendaComponent', () => {
     sucesso: vi.fn(),
     erro: vi.fn(),
   };
+  const activatedRouteSpy = {
+    snapshot: {
+      queryParamMap: {
+        get: vi.fn().mockReturnValue(null),
+      },
+    },
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -28,6 +35,7 @@ describe('AgendaComponent', () => {
         provideRouter([]),
         { provide: AgendaService, useValue: agendaServiceSpy },
         { provide: ToastService, useValue: toastServiceSpy },
+        { provide: ActivatedRoute, useValue: activatedRouteSpy },
       ],
     }).compileComponents();
 

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS pacientes (
 	telefone VARCHAR(30),
 	whatsapp_push BOOLEAN NOT NULL DEFAULT FALSE,
 	email VARCHAR(160) UNIQUE,
-	convenio_id UUID,
+	convenio_cnpj VARCHAR(18),
 	numero_carteirinha VARCHAR(60),
 	criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 	atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -20,7 +20,7 @@ ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS data_nascimento DATE;
 ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS telefone VARCHAR(30);
 ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS whatsapp_push BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS email VARCHAR(160);
-ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS convenio_id UUID;
+ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS convenio_cnpj VARCHAR(18);
 ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS numero_carteirinha VARCHAR(60);
 ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -49,4 +49,4 @@ BEGIN
 	END IF;
 END $$;
 
-CREATE INDEX IF NOT EXISTS idx_pacientes_convenio_id ON pacientes (convenio_id);
+CREATE INDEX IF NOT EXISTS idx_pacientes_convenio_cnpj ON pacientes (convenio_cnpj);

@@ -107,7 +107,7 @@ Tabela de cadastro dos pacientes da clinica.
 - telefone
 - whatsapp_push
 - email
-- convenio_id (FK convenios)
+- convenio_cnpj (FK convenios)
 - numero_carteirinha
 - criado_em
 
@@ -146,7 +146,7 @@ Registra os atendimentos agendados e realizados.
 - usuario_id (FK usuarios)
 - data_consulta
 - status (agendado / realizado / cancelado)
-- convenio_id (FK convenios, opcional)
+- convenio_cnpj (FK convenios, opcional)
 - numero_carteirinha
 - observacoes
 - criado_em

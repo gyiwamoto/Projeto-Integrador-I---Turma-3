@@ -1,0 +1,152 @@
+<section class="atendimento-page">
+  <div class="atendimento-page__header">
+    <div>
+      <p class="atendimento-page__eyebrow">Atendimento</p>
+      <h1>Consulta em andamento</h1>
+      <p>
+        Selecione uma consulta, registre os procedimentos no odontograma e finalize o atendimento quando concluir.
+      </p>
+    </div>
+  </div>
+
+  <div class="atendimento-layout">
+    <section class="atendimento-lista">
+      <div class="atendimento-lista__info">
+        <span class="section-label">Lista do dia</span>
+        <p>Consultas de hoje ainda nao realizadas, filtradas automaticamente por profissional.</p>
+      </div>
+
+      <app-tabela [colunas]="colunasConsultas" [linhas]="linhasConsultas"
+        mensagemSemDados="Nenhuma consulta disponivel." [carregando]="carregandoConsultas || carregandoTratamentos"
+        mensagemCarregando="Carregando consultas..."
+        [rotuloEditar]="consultaSelecionada ? 'Cancelar selecao' : 'Selecionar'" [acaoEditar]="acaoSelecionarConsulta"
+        [mostrarColunaExcluir]="false"></app-tabela>
+    </section>
+
+    <aside class="atendimento-detalhe">
+      @if (consultaSelecionada) {
+      <header class="atendimento-detalhe__header">
+        <div>
+          <span class="section-label">Consulta selecionada</span>
+          <h2>{{ consultaSelecionada.pacienteNome }}</h2>
+          <p>
+            {{ consultaSelecionada.profissionalNome }} · {{ consultaSelecionada.dataConsulta | date:'dd/MM/yyyy HH:mm'
+            }}
+          </p>
+        </div>
+
+        <span class="status-chip" [class.status-chip--done]="consultaSelecionada.status === 'realizado'"
+          [class.status-chip--cancelled]="consultaSelecionada.status === 'cancelado'">
+          {{ consultaSelecionada.status | titlecase }}
+        </span>
+      </header>
+
+      <div class="consulta-meta">
+        <p><strong>Codigo da carteirinha:</strong> {{ consultaSelecionada.numeroCarteirinha ?? '-' }}</p>
+        <p><strong>Convenio:</strong> {{ consultaSelecionada.convenioNome ?? '-' }}</p>
+        <p><strong>Observacoes:</strong> {{ consultaSelecionada.observacoes ?? 'Sem observacoes registradas.' }}</p>
+      </div>
+
+      <section class="atendimento-bloco">
+        <span class="section-label">Odontograma</span>
+        <div class="odontograma-grid">
+          @for (dente of dentesOdontograma; track dente) {
+          <article class="odontograma-tooth">
+            <strong>{{ dente }}</strong>
+            <div class="odontograma-faces">
+              @for (face of facesOdontograma; track face.codigo) {
+              <span [class.is-active]="possuiProcedimentoNoDenteFace(dente, face.codigo)">
+                {{ face.codigo }}
+              </span>
+              }
+            </div>
+          </article>
+          }
+        </div>
+      </section>
+
+      <section class="atendimento-bloco">
+        <div class="atendimento-bloco__header">
+          <div>
+            <span class="section-label">Novo procedimento</span>
+            <h3>Registrar no atendimento</h3>
+          </div>
+        </div>
+
+        <form class="procedimento-form" [formGroup]="formProcedimento">
+          <label>
+            <span>Tratamento</span>
+            <select formControlName="tratamentoId">
+              <option value="">Selecione</option>
+              @for (tratamento of tratamentos; track tratamento.id) {
+              <option [value]="tratamento.id">{{ tratamento.nome }}</option>
+              }
+            </select>
+          </label>
+
+          <div class="grid-2">
+            <label>
+              <span>Dente</span>
+              <select formControlName="dente">
+                @for (dente of dentesOdontograma; track dente) {
+                <option [value]="dente">{{ dente }}</option>
+                }
+              </select>
+            </label>
+
+            <label>
+              <span>Face</span>
+              <select formControlName="face">
+                @for (face of facesOdontograma; track face.codigo) {
+                <option [value]="face.codigo">{{ face.codigo }} - {{ face.nome }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
+          <label>
+            <span>Data do procedimento</span>
+            <input type="datetime-local" formControlName="dataProcedimento" />
+          </label>
+
+          <label>
+            <span>Observacoes</span>
+            <textarea formControlName="observacoes" rows="3" placeholder="Detalhe o que foi realizado"></textarea>
+          </label>
+
+          <div class="procedimento-form__actions">
+            <button type="button" class="secondary-action"
+              [disabled]="!podeAdicionarProcedimento || salvandoProcedimento" (click)="salvarProcedimento()">
+              {{ salvandoProcedimento ? 'Salvando...' : 'Adicionar procedimento' }}
+            </button>
+            <button type="button" class="primary-action" [disabled]="!podeFinalizarConsulta || finalizandoConsulta"
+              (click)="finalizarConsulta()">
+              {{ finalizandoConsulta ? 'Finalizando...' : 'Marcar como realizada' }}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="atendimento-bloco">
+        <div class="atendimento-bloco__header">
+          <div>
+            <span class="section-label">Procedimentos</span>
+            <h3>Registrados nesta consulta</h3>
+          </div>
+        </div>
+
+        <app-tabela [colunas]="colunasProcedimentos" [linhas]="procedimentosSelecionados"
+          mensagemSemDados="Nenhum procedimento registrado ainda." [carregando]="carregandoProcedimentos"
+          mensagemCarregando="Carregando procedimentos..." [mostrarColunaEditar]="false"
+          [mostrarColunaExcluir]="false"></app-tabela>
+      </section>
+      } @else {
+      <div class="atendimento-vazio">
+        <span class="material-symbols-outlined" aria-hidden="true">event_note</span>
+        <h2>Selecione uma consulta</h2>
+        <p>Use a tabela ao lado para abrir o atendimento da consulta que estiver em andamento.</p>
+      </div>
+      }
+    </aside>
+  </div>
+</section>

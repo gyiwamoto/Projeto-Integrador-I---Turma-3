@@ -2,11 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
 import { QueryCacheService } from './query-cache.service';
-
-interface ErroApiResponse {
-  erro?: string;
-}
 
 export interface TratamentoItem {
   id: string;
@@ -51,15 +48,27 @@ export class TratamentosService {
     private readonly queryCache: QueryCacheService,
   ) {}
 
-  listarTratamentos(): Observable<ListarTratamentosResponse> {
-    return this.queryCache.getOrSet(this.cacheKeyListagem, () =>
-      this.http
-        .get<ListarTratamentosResponse>(this.apiUrl, { withCredentials: true })
-        .pipe(
-          catchError((error) =>
-            throwError(() => new Error(this.extrairMensagemErro(error?.error))),
+  listarTratamentos(forcarAtualizacao = false): Observable<ListarTratamentosResponse> {
+    return this.queryCache.getOrSet(
+      this.cacheKeyListagem,
+      () =>
+        this.http
+          .get<ListarTratamentosResponse>(this.apiUrl, { withCredentials: true })
+          .pipe(
+            catchError((error) =>
+              throwError(
+                () =>
+                  new Error(
+                    extrairMensagemErroApi(
+                      error?.error,
+                      'Nao foi possivel processar os tratamentos.',
+                    ),
+                  ),
+              ),
+            ),
           ),
-        ),
+      undefined,
+      forcarAtualizacao,
     );
   }
 
@@ -76,8 +85,26 @@ export class TratamentosService {
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarTratamentosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const tratamentosAtuais = atual?.tratamentos ?? [];
+              return {
+                total: (atual?.total ?? tratamentosAtuais.length) + 1,
+                tratamentos: [resposta.tratamento, ...tratamentosAtuais],
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os tratamentos.'),
+              ),
+          ),
+        ),
       );
   }
 
@@ -97,8 +124,28 @@ export class TratamentosService {
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarTratamentosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const tratamentosAtuais = atual?.tratamentos ?? [];
+              return {
+                total: atual?.total ?? tratamentosAtuais.length,
+                tratamentos: tratamentosAtuais.map((item) =>
+                  item.id === resposta.tratamento.id ? resposta.tratamento : item,
+                ),
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os tratamentos.'),
+              ),
+          ),
+        ),
       );
   }
 
@@ -108,16 +155,27 @@ export class TratamentosService {
         withCredentials: true,
       })
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap(() => {
+          this.queryCache.updateSnapshot<ListarTratamentosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const tratamentosAtuais = atual?.tratamentos ?? [];
+              const tratamentos = tratamentosAtuais.filter((item) => item.id !== tratamentoId);
+              return {
+                total: tratamentos.length,
+                tratamentos,
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os tratamentos.'),
+              ),
+          ),
+        ),
       );
-  }
-
-  private extrairMensagemErro(payload: ErroApiResponse | undefined): string {
-    if (payload && typeof payload.erro === 'string' && payload.erro.trim()) {
-      return payload.erro;
-    }
-
-    return 'Nao foi possivel processar os tratamentos.';
   }
 }

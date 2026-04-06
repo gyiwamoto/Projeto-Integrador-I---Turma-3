@@ -27,6 +27,12 @@ export class SidebarComponent {
       icon: 'calendar_month',
       adminOnly: false,
     },
+    {
+      label: 'Atendimento',
+      route: '/dashboard/atendimento',
+      icon: 'medical_information',
+      adminOnly: false,
+    },
     { label: 'Consultas', route: '/dashboard/consultas', icon: 'event_note', adminOnly: false },
     { label: 'Pacientes', route: '/dashboard/pacientes', icon: 'groups', adminOnly: false },
     {

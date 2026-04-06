@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FiltroCampo, FiltrosComponent } from '../../components/filtros/filtros.component';
 import { ModalComponent } from '../../components/modal/modal.component';
@@ -24,8 +24,10 @@ type ModoFormularioConvenio = 'criar' | 'editar';
 export class ConveniosPage implements OnInit {
   private readonly conveniosService = inject(ConveniosService);
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly colunasTabela: TabelaColuna[] = [
+    { chave: 'cnpj', titulo: 'CNPJ' },
     { chave: 'nome', titulo: 'Nome' },
     {
       chave: 'ativo',
@@ -72,6 +74,7 @@ export class ConveniosPage implements OnInit {
 
   readonly formConvenio = this.fb.group({
     nome: ['', [Validators.required, Validators.minLength(3)]],
+    cnpj: [''],
     ativo: [true, [Validators.required]],
   });
 
@@ -128,6 +131,7 @@ export class ConveniosPage implements OnInit {
     this.modalConvenioAberto = true;
     this.formConvenio.reset({
       nome: convenio.nome,
+      cnpj: convenio.cnpj ?? '',
       ativo: convenio.ativo,
     });
   }
@@ -141,6 +145,7 @@ export class ConveniosPage implements OnInit {
     const valor = this.formConvenio.getRawValue();
     const payload: SalvarConvenioPayload = {
       nome: (valor.nome ?? '').trim(),
+      cnpj: (valor.cnpj ?? '').trim(),
       ativo: Boolean(valor.ativo),
     };
 
@@ -176,10 +181,12 @@ export class ConveniosPage implements OnInit {
         this.modalExclusaoAberto = false;
         this.convenioSelecionado = null;
         this.excluindo = false;
+        this.cdr.markForCheck();
       },
       error: (error: Error) => {
         this.excluindo = false;
         this.erroMensagem = error.message || 'Nao foi possivel excluir o convenio.';
+        this.cdr.markForCheck();
       },
     });
   }
@@ -206,10 +213,12 @@ export class ConveniosPage implements OnInit {
       next: (resposta) => {
         this.convenios = resposta.convenios;
         this.carregando = false;
+        this.cdr.markForCheck();
       },
       error: (error: Error) => {
         this.carregando = false;
         this.erroMensagem = error.message || 'Nao foi possivel carregar os convenios.';
+        this.cdr.markForCheck();
       },
     });
   }
@@ -224,10 +233,12 @@ export class ConveniosPage implements OnInit {
         this.salvando = false;
         this.fecharModalConvenio();
         this.carregarConvenios();
+        this.cdr.markForCheck();
       },
       error: (error: Error) => {
         this.salvando = false;
         this.erroMensagem = error.message || 'Nao foi possivel criar o convenio.';
+        this.cdr.markForCheck();
       },
     });
   }
@@ -242,10 +253,12 @@ export class ConveniosPage implements OnInit {
         this.salvando = false;
         this.fecharModalConvenio();
         this.carregarConvenios();
+        this.cdr.markForCheck();
       },
       error: (error: Error) => {
         this.salvando = false;
         this.erroMensagem = error.message || 'Nao foi possivel atualizar o convenio.';
+        this.cdr.markForCheck();
       },
     });
   }

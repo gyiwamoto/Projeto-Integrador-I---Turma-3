@@ -51,7 +51,7 @@ Com isso, chamadas para `/api/*` sao encaminhadas para `http://localhost:3000` p
 
 - Tela de pacientes alinhada ao schema do banco (`pacientes`):
   - `codigo_paciente` e exibido como somente leitura e gerado no backend.
-  - formulario envia apenas campos aceitos pelo backend (`nome`, `data_nascimento`, `telefone`, `whatsapp_push`, `email`, `convenio_id`, `numero_carteirinha`).
+  - formulario envia apenas campos aceitos pelo backend (`nome`, `data_nascimento`, `telefone`, `whatsapp_push`, `email`, `convenio_cnpj`, `numero_carteirinha`).
 - Tela Minha Conta passou a exibir "Meus agendamentos" para `dentista` e `admin`.
 
 ## Fluxo recomendado (workspace)

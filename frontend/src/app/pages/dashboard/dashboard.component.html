@@ -1,4 +1,12 @@
 <section class="dashboard-page">
+  @if (carregandoDados) {
+  <p class="dashboard-status">Carregando dados reais do sistema...</p>
+  }
+
+  @if (erroDados) {
+  <p class="dashboard-status dashboard-status--erro">{{ erroDados }}</p>
+  }
+
   <header class="dashboard-hero">
     <div>
       <p class="dashboard-hero__eyebrow">Painel operacional</p>
@@ -26,17 +34,17 @@
         <div class="resumo-item">
           <span>Consultas hoje</span>
           <strong>{{ consultasHoje }}</strong>
-          <small>{{ confirmacoesHoje }} confirmacoes de comparecimento</small>
+          <small>{{ confirmacoesHoje }} consultas realizadas</small>
         </div>
         <div class="resumo-item">
-          <span>Consultas confirmadas</span>
+          <span>Consultas realizadas</span>
           <strong>{{ confirmacoesHoje }}</strong>
-          <small>Taxa de comparecimento estimada: 81%</small>
+          <small>Baseado no status informado pelo sistema</small>
         </div>
         <div class="resumo-item">
           <span>Cancelamentos</span>
           <strong>{{ cancelamentosHoje }}</strong>
-          <small>Ultima atualizacao ha 10 minutos</small>
+          <small>Cancelamentos registrados hoje</small>
         </div>
         <div class="resumo-item">
           <span>Pacientes ativos</span>
@@ -95,7 +103,7 @@
     <article class="dashboard-panel">
       <div class="panel-header">
         <div>
-          <span class="panel-header__eyebrow">Faturamento</span>
+          <span class="panel-header__eyebrow">Receita</span>
           <h2>Atual do mes</h2>
         </div>
 
@@ -144,7 +152,7 @@
       <div class="faturamento-chart">
         <div class="faturamento-chart__header">
           <h3>{{ tituloGraficoFaturamento }}</h3>
-          <span>Evolucao do faturamento no periodo selecionado</span>
+          <span>Estimativa com base nos procedimentos realizados</span>
         </div>
 
         <div class="faturamento-chart__canvas-wrap">

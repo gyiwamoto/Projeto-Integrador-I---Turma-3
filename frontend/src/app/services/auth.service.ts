@@ -2,9 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
+import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
+import { QueryCacheService } from './query-cache.service';
 
 interface UsuarioAutenticado {
-  id: number;
+  id: string;
   nome: string;
   email: string;
   tipo_usuario: 'admin' | 'dentista' | 'recepcionista';
@@ -13,10 +15,6 @@ interface UsuarioAutenticado {
 export interface LoginResponse {
   expira_em: string;
   usuario: UsuarioAutenticado;
-}
-
-interface ErroApiResponse {
-  erro?: string;
 }
 
 interface SessaoPersistida {
@@ -39,7 +37,10 @@ export class AuthService {
   private usuarioAutenticado: UsuarioAutenticado | null = null;
   private expiraEm: Date | null = null;
 
-  constructor(private readonly http: HttpClient) {
+  constructor(
+    private readonly http: HttpClient,
+    private readonly queryCache: QueryCacheService,
+  ) {
     this.hidratarSessaoDoStorage();
   }
 
@@ -50,7 +51,17 @@ export class AuthService {
         tap((resposta) => {
           this.definirSessaoAtiva(resposta.usuario, this.calcularExpiracao(resposta.expira_em));
         }),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(
+                  error?.error,
+                  'Nao foi possivel processar a autenticacao. Tente novamente.',
+                ),
+              ),
+          ),
+        ),
       );
   }
 
@@ -89,7 +100,15 @@ export class AuthService {
       tap(() => this.removerToken()),
       catchError((error) => {
         this.removerToken();
-        return throwError(() => new Error(this.extrairMensagemErro(error?.error)));
+        return throwError(
+          () =>
+            new Error(
+              extrairMensagemErroApi(
+                error?.error,
+                'Nao foi possivel processar a autenticacao. Tente novamente.',
+              ),
+            ),
+        );
       }),
     );
   }
@@ -114,10 +133,12 @@ export class AuthService {
     this.sessaoAtiva = false;
     this.usuarioAutenticado = null;
     this.expiraEm = null;
+    this.queryCache.clear();
     this.limparSessaoPersistida();
   }
 
   private definirSessaoAtiva(usuario: UsuarioAutenticado, expiraEm: Date): void {
+    this.queryCache.clear();
     this.sessaoAtiva = true;
     this.usuarioAutenticado = usuario;
     this.expiraEm = expiraEm;
@@ -203,13 +224,5 @@ export class AuthService {
     }
 
     window.sessionStorage.removeItem(this.chaveSessaoStorage);
-  }
-
-  private extrairMensagemErro(payload: ErroApiResponse | undefined): string {
-    if (payload && typeof payload.erro === 'string' && payload.erro.trim()) {
-      return payload.erro;
-    }
-
-    return 'Nao foi possivel processar a autenticacao. Tente novamente.';
   }
 }

@@ -6,8 +6,8 @@
 
 | Funcionalidade | Endpoint | Schema de Resposta | Frontend |
 |---|---|---|---|
-| Listar consultas | GET /api/consultas | `{ id, paciente_id, paciente_nome, usuario_id, usuario_nome, status, data_consulta, convenio_id, convenio_nome, criado_em }` | ✅ AgendaService.listarConsultas() |
-| Listar pacientes | GET /api/pacientes | `{ id, codigo_paciente, nome, data_nascimento, telefone, whatsapp_push, email, convenio_id, numero_carteirinha, criado_em }` | ✅ AgendaService.listarPacientes() |
+| Listar consultas | GET /api/consultas | `{ id, paciente_id, paciente_nome, usuario_id, usuario_nome, status, data_consulta, convenio_cnpj, convenio_nome, criado_em }` | ✅ AgendaService.listarConsultas() |
+| Listar pacientes | GET /api/pacientes | `{ id, codigo_paciente, nome, data_nascimento, telefone, whatsapp_push, email, convenio_cnpj, numero_carteirinha, criado_em }` | ✅ AgendaService.listarPacientes() |
 | Listar tratamentos | GET /api/tratamentos | `{ id, nome, descricao, valor, ativo, criado_em, atualizado_em }` | ✅ TratamentosService.listarTratamentos() |
 | Listar convênios | GET /api/convenios | `{ id, nome, ativo, criado_em, atualizado_em }` | ✅ ConveniosService.listarConvenios() |
 | Listar usuários | GET /api/usuarios | `{ id, nome, email, tipo_usuario, ativo, criado_em }` | ✅ UsuariosService.listarUsuarios() |
@@ -16,7 +16,7 @@
 
 | Funcionalidade | Endpoint | Body Esperado | Prioridade | Status |
 |---|---|---|---|---|
-| **Criar consulta** | POST /api/consultas | `{ paciente_id, usuario_id, data_consulta, convenio_id, numero_carteirinha, observacoes }` | **P0** | ❌ B1 |
+| **Criar consulta** | POST /api/consultas | `{ paciente_id, usuario_id, data_consulta, convenio_cnpj, numero_carteirinha, observacoes }` | **P0** | ❌ B1 |
 | **Atualizar status consulta** | PUT /api/consultas/:id | `{ status: "agendado\|realizado\|cancelado" }` | **P0** | ❌ B2 |
 | **Cancelar consulta** | DELETE /api/consultas/:id | `{ motivo? }` | **P0** | ❌ B3 |
 | **Dashboard indicadores** | GET /api/dashboard/resumo | - (com agregações reais) | **P0** | ❌ B4 |
@@ -54,14 +54,14 @@ Implementar funcionalidade completa de criação de consulta no backend e integr
 **Arquivos a modificar (Backend):**
 - `api/consultas/index.ts` - Adicionar case `'POST'` no handler que valida body e chama `criarConsulta()`
 - `services/consultas.service.ts` - Implementar `async function criarConsulta(req)` com:
-  - Validação de paciente_id, usuario_id, data_consulta, convenio_id (opcional)
+  - Validação de paciente_id, usuario_id, data_consulta, convenio_cnpj (opcional)
   - INSERT em tabela `consultas`
   - Log de auditoria em `logs_acessos`
   - Retorno do ID criado
 
 **Arquivos a modificar (Frontend):**
 - `frontend/src/app/pages/agenda/agenda.component.ts` - Remover chamada a `registrarAgendamentoLocal()`, chamar `agendaService.criarConsulta()`
-- `frontend/src/app/services/agenda.service.ts` - Adicionar método `criarConsulta(paciente_id, usuario_id, data_consulta, convenio_id?, observacoes?): Observable<{ id: string }>`
+- `frontend/src/app/services/agenda.service.ts` - Adicionar método `criarConsulta(paciente_id, usuario_id, data_consulta, convenio_cnpj?, observacoes?): Observable<{ id: string }>`
 
 **Request Schema:**
 ```json
@@ -69,7 +69,7 @@ Implementar funcionalidade completa de criação de consulta no backend e integr
   "paciente_id": "uuid (required)",
   "usuario_id": "uuid (required)",
   "data_consulta": "ISO8601 (required)",
-  "convenio_id": "uuid (optional, null para particular)",
+  "convenio_cnpj": "uuid (optional, null para particular)",
   "numero_carteirinha": "string (optional)",
   "observacoes": "string (optional)"
 }
@@ -425,7 +425,7 @@ Query params (todos opcionais):
 Bloquear agendamento quando convênio exige carteirinha e o campo número_carteirinha estiver vazio ou inválido. Adicionar validação tanto no frontend (feedback imediato) quanto no backend (segurança).
 
 **Arquivos a modificar:**
-- `frontend/src/app/pages/agenda/agenda.component.ts` - Validar se convenio_id selecionado exige carteirinha
+- `frontend/src/app/pages/agenda/agenda.component.ts` - Validar se convenio_cnpj selecionado exige carteirinha
 - `frontend/src/app/pages/agenda/agenda.component.html` - Tornar campo carteirinha obrigatório condicionalmente
 - `api/consultas/index.ts` - Validar no backend se carteirinha é obrigatória
 - `services/consultas.service.ts` - Adicionar lógica de validação cruzada

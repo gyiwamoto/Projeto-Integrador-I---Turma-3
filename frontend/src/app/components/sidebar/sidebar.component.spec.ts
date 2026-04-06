@@ -142,7 +142,7 @@ describe('SidebarComponent', () => {
   describe('Nome do Usuario', () => {
     it('exibe nome do usuario autenticado', () => {
       const usuarioAutenticado: UsuarioAutenticado = {
-        id: 1,
+        id: '1',
         nome: 'João Silva',
         email: 'joao@test.com',
         tipo_usuario: 'dentista',
@@ -162,7 +162,7 @@ describe('SidebarComponent', () => {
 
     it('exibe "Usuario" quando sessao nao tem nome', () => {
       const usuarioSemNome: UsuarioAutenticado = {
-        id: 1,
+        id: '1',
         nome: '',
         email: 'joao@test.com',
         tipo_usuario: 'dentista',
@@ -175,7 +175,7 @@ describe('SidebarComponent', () => {
 
     it('renderiza nome do usuario na sidebar', () => {
       const usuarioAutenticado: UsuarioAutenticado = {
-        id: 1,
+        id: '1',
         nome: 'Maria Oliveira',
         email: 'maria@test.com',
         tipo_usuario: 'recepcionista',
@@ -187,7 +187,7 @@ describe('SidebarComponent', () => {
 
     it('atualiza nome quando sessao autem muda', () => {
       const usuario1: UsuarioAutenticado = {
-        id: 1,
+        id: '1',
         nome: 'João',
         email: 'joao@test.com',
         tipo_usuario: 'dentista',
@@ -197,7 +197,7 @@ describe('SidebarComponent', () => {
       expect(component.usuarioNome).toBe('João');
 
       const usuario2: UsuarioAutenticado = {
-        id: 2,
+        id: '2',
         nome: 'Maria',
         email: 'maria@test.com',
         tipo_usuario: 'dentista',

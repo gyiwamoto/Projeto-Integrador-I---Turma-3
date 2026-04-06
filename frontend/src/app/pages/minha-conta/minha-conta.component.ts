@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs/operators';
 import { AgendaConsulta } from '../../interfaces/Agenda';
 import { AgendaService } from '../../services/agenda.service';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { UsuariosService } from '../../services/usuarios.service';
+import { formatarData } from '../../utils/formatar-data';
 
 @Component({
   selector: 'app-minha-conta',
@@ -16,6 +18,7 @@ import { UsuariosService } from '../../services/usuarios.service';
 })
 export class MinhaContaPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly authService = inject(AuthService);
   private readonly agendaService = inject(AgendaService);
   private readonly usuariosService = inject(UsuariosService);
@@ -83,15 +86,7 @@ export class MinhaContaPage implements OnInit {
   }
 
   formatarDataConsulta(dataConsulta: string): string {
-    const data = new Date(dataConsulta);
-    if (Number.isNaN(data.getTime())) {
-      return dataConsulta;
-    }
-
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(data);
+    return formatarData(dataConsulta);
   }
 
   formatarStatus(status: AgendaConsulta['status']): string {
@@ -244,17 +239,26 @@ export class MinhaContaPage implements OnInit {
 
   private carregarMeusAgendamentos(): void {
     this.carregandoAgendamentos = true;
+    this.cdr.markForCheck();
 
-    this.agendaService.listarConsultas().subscribe({
-      next: (consultas) => {
-        this.meusAgendamentos = consultas;
-        this.carregandoAgendamentos = false;
-      },
-      error: (error: Error) => {
-        this.carregandoAgendamentos = false;
-        this.toastService.erro(error.message || 'Nao foi possivel carregar agendamentos.');
-      },
-    });
+    this.agendaService
+      .listarConsultas(true)
+      .pipe(
+        finalize(() => {
+          this.carregandoAgendamentos = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (consultas) => {
+          this.meusAgendamentos = consultas ?? [];
+          this.cdr.markForCheck();
+        },
+        error: (error: Error) => {
+          this.toastService.erro(error.message || 'Nao foi possivel carregar agendamentos.');
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   private descricaoTipoUsuario(tipo: string): string {

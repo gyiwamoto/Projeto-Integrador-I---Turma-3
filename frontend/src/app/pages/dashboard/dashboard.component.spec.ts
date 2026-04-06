@@ -3,6 +3,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { DashboardComponent } from './dashboard.component';
 import { AuthService } from '../../services/auth.service';
+import { AgendaService } from '../../services/agenda.service';
+import { PacientesService } from '../../services/pacientes.service';
+import { ProcedimentosRealizadosService } from '../../services/procedimentos-realizados.service';
+import { TratamentosService } from '../../services/tratamentos.service';
+import { of } from 'rxjs';
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
@@ -10,13 +15,34 @@ describe('DashboardComponent', () => {
   const authServiceSpy = {
     obterSessaoAutenticada: vi.fn(),
   };
+  const agendaServiceSpy = {
+    listarConsultas: vi.fn().mockReturnValue(of([])),
+  };
+  const pacientesServiceSpy = {
+    listarPacientes: vi.fn().mockReturnValue(of({ total: 0, pacientes: [] })),
+  };
+  const procedimentosServiceSpy = {
+    listarProcedimentosRealizados: vi
+      .fn()
+      .mockReturnValue(of({ total: 0, procedimentos_realizados: [] })),
+  };
+  const tratamentosServiceSpy = {
+    listarTratamentos: vi.fn().mockReturnValue(of({ total: 0, tratamentos: [] })),
+  };
 
   beforeEach(async () => {
     authServiceSpy.obterSessaoAutenticada.mockReturnValue({ nome: 'Equipe' });
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
-      providers: [provideRouter([]), { provide: AuthService, useValue: authServiceSpy }],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: authServiceSpy },
+        { provide: AgendaService, useValue: agendaServiceSpy },
+        { provide: PacientesService, useValue: pacientesServiceSpy },
+        { provide: ProcedimentosRealizadosService, useValue: procedimentosServiceSpy },
+        { provide: TratamentosService, useValue: tratamentosServiceSpy },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DashboardComponent);

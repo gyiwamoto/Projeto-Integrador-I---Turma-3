@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   AgendaCalendarioComponent,
   DiaAgenda,
@@ -25,6 +25,7 @@ interface Slot {
   styleUrl: './agenda.component.scss',
 })
 export class AgendaComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly agendaService = inject(AgendaService);
   private readonly toastService = inject(ToastService);
@@ -48,6 +49,7 @@ export class AgendaComponent implements OnInit {
   carregandoConsultas = false;
   termoBusca = '';
   pacienteSelecionado: AgendaPaciente | null = null;
+  pacientePreSelecionado: AgendaPaciente | null = null;
 
   pacientes: AgendaPaciente[] = [];
   consultas: AgendaConsulta[] = [];
@@ -71,6 +73,7 @@ export class AgendaComponent implements OnInit {
   readonly consultaNoSlot = (hora: number, min: number): string => this.getConsulta(hora, min);
 
   ngOnInit(): void {
+    this.carregarPacienteDaRota();
     this.carregarPacientes();
     this.carregarConsultas();
   }
@@ -156,7 +159,13 @@ export class AgendaComponent implements OnInit {
       return data.getHours() === hora && data.getMinutes() === min;
     });
 
-    return consulta ? `${consulta.pacienteId} ${consulta.pacienteNome}` : '';
+    if (!consulta) {
+      return '';
+    }
+
+    const codigoPaciente =
+      consulta.codigoPaciente?.trim() || this.obterCodigoPacientePorId(consulta.pacienteId);
+    return `${codigoPaciente} ${consulta.pacienteNome}`.trim();
   }
 
   selecionarDia(dia: number, mes: number, ano: number): void {
@@ -247,11 +256,25 @@ export class AgendaComponent implements OnInit {
     }
 
     this.slotSelecionado = { hora, min };
+
+    if (this.pacienteSelecionado || this.pacientePreSelecionado) {
+      this.pacienteSelecionado = this.pacienteSelecionado ?? this.pacientePreSelecionado;
+      this.modalConfirmAberto = true;
+      return;
+    }
+
     this.modalAcaoAberto = true;
   }
 
   escolherAgendar(): void {
     this.modalAcaoAberto = false;
+
+    if (this.pacientePreSelecionado) {
+      this.pacienteSelecionado = this.pacientePreSelecionado;
+      this.modalConfirmAberto = true;
+      return;
+    }
+
     this.termoBusca = '';
     this.pacienteSelecionado = null;
     this.modalBuscaAberto = true;
@@ -288,6 +311,7 @@ export class AgendaComponent implements OnInit {
 
     this.agendaService.registrarAgendamentoLocal({
       pacienteId: this.pacienteSelecionado.id,
+      codigoPaciente: this.pacienteSelecionado.codigoPaciente,
       pacienteNome: this.pacienteSelecionado.nome,
       profissionalNome: this.nomeProfissionalSelecionado,
       dataConsulta: dataConsulta.toISOString(),
@@ -299,7 +323,10 @@ export class AgendaComponent implements OnInit {
 
     this.modalConfirmAberto = false;
     this.slotSelecionado = null;
-    this.pacienteSelecionado = null;
+
+    if (!this.pacientePreSelecionado) {
+      this.pacienteSelecionado = null;
+    }
   }
 
   fecharModalAcao(): void {
@@ -342,6 +369,7 @@ export class AgendaComponent implements OnInit {
     this.agendaService.listarPacientes().subscribe({
       next: (pacientes) => {
         this.pacientes = pacientes;
+        this.sincronizarPacientePreSelecionado();
         this.carregandoPacientes = false;
       },
       error: (error: Error) => {
@@ -349,6 +377,44 @@ export class AgendaComponent implements OnInit {
         this.toastService.erro(error.message || 'Falha ao carregar pacientes da agenda.');
       },
     });
+  }
+
+  private carregarPacienteDaRota(): void {
+    const pacienteId = this.route.snapshot.queryParamMap.get('pacienteId')?.trim() ?? '';
+    const pacienteNome = this.route.snapshot.queryParamMap.get('pacienteNome')?.trim() ?? '';
+    const pacienteCodigo = this.route.snapshot.queryParamMap.get('pacienteCodigo')?.trim() ?? '';
+    const pacienteTelefone =
+      this.route.snapshot.queryParamMap.get('pacienteTelefone')?.trim() ?? '';
+
+    if (!pacienteId) {
+      this.pacientePreSelecionado = null;
+      return;
+    }
+
+    this.pacientePreSelecionado = {
+      id: pacienteId,
+      codigoPaciente: pacienteCodigo,
+      nome: pacienteNome || 'Paciente selecionado',
+      telefone: pacienteTelefone,
+      email: '',
+      numeroCarteirinha: '',
+    };
+
+    this.pacienteSelecionado = this.pacientePreSelecionado;
+  }
+
+  private sincronizarPacientePreSelecionado(): void {
+    if (!this.pacientePreSelecionado) {
+      return;
+    }
+
+    const pacienteCompleto = this.pacientes.find(
+      (paciente) => paciente.id === this.pacientePreSelecionado?.id,
+    );
+    if (pacienteCompleto) {
+      this.pacientePreSelecionado = pacienteCompleto;
+      this.pacienteSelecionado = pacienteCompleto;
+    }
   }
 
   private carregarConsultas(): void {
@@ -364,6 +430,12 @@ export class AgendaComponent implements OnInit {
         this.toastService.erro(error.message || 'Falha ao carregar consultas da agenda.');
       },
     });
+  }
+
+  private obterCodigoPacientePorId(pacienteId: string): string {
+    return (
+      this.pacientes.find((paciente) => paciente.id === pacienteId)?.codigoPaciente ?? pacienteId
+    );
   }
 
   private normalizar(valor: string): string {

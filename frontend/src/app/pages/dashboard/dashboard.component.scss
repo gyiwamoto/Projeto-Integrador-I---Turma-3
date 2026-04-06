@@ -10,6 +10,20 @@
   font-family: 'DM Sans', sans-serif;
 }
 
+.dashboard-status {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0.9rem;
+  background: rgba(31, 111, 141, 0.08);
+  color: #1f6f8d;
+  font-weight: 700;
+}
+
+.dashboard-status--erro {
+  background: rgba(170, 59, 59, 0.08);
+  color: #aa3b3b;
+}
+
 .dashboard-hero {
   display: flex;
   justify-content: space-between;

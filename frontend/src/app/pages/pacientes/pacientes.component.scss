@@ -244,6 +244,69 @@ label {
   }
 }
 
+.consulta-detalhe {
+  display: grid;
+  gap: 1rem;
+}
+
+.consulta-detalhe__bloco {
+  display: grid;
+  gap: 0.75rem;
+
+  p {
+    margin: 0;
+    color: #17324d;
+    line-height: 1.6;
+  }
+}
+
+.consulta-detalhe__acoes {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.odontograma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.6rem, 1fr));
+  gap: 0.65rem;
+}
+
+.odontograma-tooth {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(18, 34, 54, 0.08);
+  background: rgba(31, 111, 141, 0.04);
+  text-align: center;
+
+  strong {
+    color: #17324d;
+  }
+}
+
+.odontograma-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+
+  span {
+    min-width: 1.65rem;
+    padding: 0.2rem 0.35rem;
+    border-radius: 999px;
+    background: rgba(18, 34, 54, 0.08);
+    color: #44627d;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .is-active {
+    background: linear-gradient(135deg, #1f6f8d, #224b78);
+    color: #fff;
+  }
+}
+
 @media (max-width: 960px) {
   .pacientes-page__header,
   .consultations-block__header,

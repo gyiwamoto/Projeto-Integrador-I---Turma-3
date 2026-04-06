@@ -11,7 +11,7 @@ interface PacienteListagem {
   telefone: string | null;
   whatsapp_push: boolean;
   email: string | null;
-  convenio_id: string | null;
+  convenio_cnpj: string | null;
   convenio_nome: string | null;
   numero_carteirinha: string | null;
   criado_em: string;
@@ -25,7 +25,7 @@ interface CriarPacienteBody {
   telefone?: string;
   whatsapp_push?: boolean;
   email?: string;
-  convenio_id?: string;
+  convenio_cnpj?: string;
   numero_carteirinha?: string;
 }
 
@@ -36,7 +36,7 @@ interface EditarPacienteBody {
   telefone?: string;
   whatsapp_push?: boolean;
   email?: string;
-  convenio_id?: string;
+  convenio_cnpj?: string;
   numero_carteirinha?: string;
 }
 
@@ -76,12 +76,12 @@ export async function listarPacientes(req: VercelRequest, res: VercelResponse) {
             p.telefone,
             p.whatsapp_push,
             p.email,
-            p.convenio_id,
+            p.convenio_cnpj,
             c.nome AS convenio_nome,
             p.numero_carteirinha,
             p.criado_em
        FROM pacientes p
-       LEFT JOIN convenios c ON c.id = p.convenio_id
+         LEFT JOIN convenios c ON c.cnpj = p.convenio_cnpj
       ORDER BY p.criado_em DESC`,
   );
 
@@ -155,12 +155,12 @@ export async function criarPaciente(req: VercelRequest, res: VercelResponse) {
     const telefone = body.telefone ? String(body.telefone).trim() : null;
     const whatsappPush = Boolean(body.whatsapp_push);
     const email = body.email ? String(body.email).trim().toLowerCase() : null;
-    const convenioId = body.convenio_id ? String(body.convenio_id).trim() : null;
+    const convenioId = body.convenio_cnpj ? String(body.convenio_cnpj).trim() : null;
     const numeroCarteirinha = body.numero_carteirinha ? String(body.numero_carteirinha).trim() : null;
 
     const resultado = await pool.query<Paciente>(
       `INSERT INTO pacientes
-        (nome, data_nascimento, telefone, whatsapp_push, email, convenio_id, numero_carteirinha)
+        (nome, data_nascimento, telefone, whatsapp_push, email, convenio_cnpj, numero_carteirinha)
       VALUES
         ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id,
@@ -170,7 +170,7 @@ export async function criarPaciente(req: VercelRequest, res: VercelResponse) {
                 telefone,
                 whatsapp_push,
                 email,
-                convenio_id,
+                convenio_cnpj,
                 NULL::TEXT AS convenio_nome,
                 numero_carteirinha,
                 criado_em`,
@@ -352,9 +352,9 @@ export async function editarPaciente(req: VercelRequest, res: VercelResponse) {
       campos.push({ chave: 'email', valor: email });
     }
 
-    if (body.convenio_id !== undefined) {
-      const convenioId = body.convenio_id ? String(body.convenio_id).trim() : null;
-      campos.push({ chave: 'convenio_id', valor: convenioId });
+    if (body.convenio_cnpj !== undefined) {
+      const convenioId = body.convenio_cnpj ? String(body.convenio_cnpj).trim() : null;
+      campos.push({ chave: 'convenio_cnpj', valor: convenioId });
     }
 
     if (body.numero_carteirinha !== undefined) {
@@ -382,7 +382,7 @@ export async function editarPaciente(req: VercelRequest, res: VercelResponse) {
                 telefone,
                 whatsapp_push,
                 email,
-                convenio_id,
+                convenio_cnpj,
                 NULL::TEXT AS convenio_nome,
                 numero_carteirinha,
                 criado_em`,

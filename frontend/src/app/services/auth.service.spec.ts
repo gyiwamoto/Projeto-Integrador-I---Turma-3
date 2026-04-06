@@ -11,7 +11,7 @@ describe('AuthService', () => {
   const respostaLoginMock: LoginResponse = {
     expira_em: '8h',
     usuario: {
-      id: 1,
+      id: '1',
       nome: 'Admin',
       email: 'admin@dentistaOrganizado.com',
       tipo_usuario: 'admin',

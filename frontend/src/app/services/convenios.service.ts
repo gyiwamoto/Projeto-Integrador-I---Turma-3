@@ -3,11 +3,8 @@ import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { ConvenioItem, SalvarConvenioPayload } from '../interfaces/Convenio';
+import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
 import { QueryCacheService } from './query-cache.service';
-
-interface ErroApiResponse {
-  erro?: string;
-}
 
 export interface ListarConveniosResponse {
   total: number;
@@ -41,7 +38,12 @@ export class ConveniosService {
         .get<ListarConveniosResponse>(this.apiUrl, { withCredentials: true })
         .pipe(
           catchError((error) =>
-            throwError(() => new Error(this.extrairMensagemErro(error?.error))),
+            throwError(
+              () =>
+                new Error(
+                  extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os convenios.'),
+                ),
+            ),
           ),
         ),
     );
@@ -53,13 +55,32 @@ export class ConveniosService {
         this.apiUrl,
         {
           nome: payload.nome.trim(),
+          cnpj: payload.cnpj?.trim() || null,
           ativo: payload.ativo,
         },
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarConveniosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const conveniosAtuais = atual?.convenios ?? [];
+              return {
+                total: (atual?.total ?? conveniosAtuais.length) + 1,
+                convenios: [resposta.convenio, ...conveniosAtuais],
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os convenios.'),
+              ),
+          ),
+        ),
       );
   }
 
@@ -72,13 +93,34 @@ export class ConveniosService {
         `${this.apiUrl}?id=${encodeURIComponent(convenioId)}`,
         {
           nome: payload.nome.trim(),
+          cnpj: payload.cnpj?.trim() || null,
           ativo: payload.ativo,
         },
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarConveniosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const conveniosAtuais = atual?.convenios ?? [];
+              return {
+                total: atual?.total ?? conveniosAtuais.length,
+                convenios: conveniosAtuais.map((item) =>
+                  item.id === resposta.convenio.id ? resposta.convenio : item,
+                ),
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os convenios.'),
+              ),
+          ),
+        ),
       );
   }
 
@@ -88,16 +130,27 @@ export class ConveniosService {
         withCredentials: true,
       })
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap(() => {
+          this.queryCache.updateSnapshot<ListarConveniosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const conveniosAtuais = atual?.convenios ?? [];
+              const convenios = conveniosAtuais.filter((item) => item.id !== convenioId);
+              return {
+                total: convenios.length,
+                convenios,
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os convenios.'),
+              ),
+          ),
+        ),
       );
-  }
-
-  private extrairMensagemErro(payload: ErroApiResponse | undefined): string {
-    if (payload && typeof payload.erro === 'string' && payload.erro.trim()) {
-      return payload.erro;
-    }
-
-    return 'Nao foi possivel processar os convenios.';
   }
 }

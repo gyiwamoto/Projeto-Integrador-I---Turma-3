@@ -2,12 +2,12 @@
   display: block;
 }
 
-.consultas-page {
+.atendimento-page {
   display: grid;
   gap: 1rem;
 }
 
-.consultas-page__header {
+.atendimento-page__header {
   padding: 1.2rem;
   border-radius: 1.1rem;
   border: 1px solid rgba(20, 48, 74, 0.1);
@@ -24,7 +24,7 @@
   }
 }
 
-.consultas-page__eyebrow,
+.atendimento-page__eyebrow,
 .section-label {
   display: inline-block;
   margin-bottom: 0.4rem;
@@ -35,22 +35,22 @@
   color: #6d8399;
 }
 
-.consultas-layout {
+.atendimento-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
   gap: 1rem;
   align-items: start;
 }
 
-.consultas-lista,
-.consultas-detalhe {
+.atendimento-lista,
+.atendimento-detalhe {
   border: 1px solid rgba(20, 48, 74, 0.1);
   border-radius: 1.1rem;
   background: rgba(255, 255, 255, 0.92);
   padding: 1rem;
 }
 
-.consultas-lista__info {
+.atendimento-lista__info {
   display: grid;
   gap: 0.35rem;
   margin-bottom: 0.85rem;
@@ -62,13 +62,13 @@
   }
 }
 
-.consultas-detalhe {
+.atendimento-detalhe {
   display: grid;
   gap: 1rem;
   min-height: 100%;
 }
 
-.consultas-detalhe__header {
+.atendimento-detalhe__header {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
@@ -120,12 +120,12 @@
   }
 }
 
-.consultas-bloco {
+.atendimento-bloco {
   display: grid;
   gap: 0.75rem;
 }
 
-.consultas-bloco__header {
+.atendimento-bloco__header {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
@@ -136,12 +136,12 @@
   }
 }
 
-.consulta-form {
+.procedimento-form {
   display: grid;
   gap: 0.9rem;
 }
 
-.consulta-form__grid {
+.grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
@@ -172,7 +172,7 @@ label {
   }
 }
 
-.consulta-form__actions {
+.procedimento-form__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -198,19 +198,65 @@ label {
   color: #17324d;
 }
 
-.consultas-vazio {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 3rem 2rem;
+.primary-action:disabled,
+.secondary-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.odontograma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.4rem, 1fr));
+  gap: 0.65rem;
+}
+
+.odontograma-tooth {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(18, 34, 54, 0.08);
+  background: rgba(31, 111, 141, 0.04);
   text-align: center;
 
+  strong {
+    color: #17324d;
+  }
+}
+
+.odontograma-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+
+  span {
+    min-width: 1.65rem;
+    padding: 0.2rem 0.35rem;
+    border-radius: 999px;
+    background: rgba(18, 34, 54, 0.08);
+    color: #44627d;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .is-active {
+    background: linear-gradient(135deg, #1f6f8d, #224b78);
+    color: #fff;
+  }
+}
+
+.atendimento-vazio {
+  display: grid;
+  gap: 0.5rem;
+  place-items: center;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #5f7488;
+
   .material-symbols-outlined {
-    font-size: 3rem;
-    color: #6d8399;
-    font-variation-settings: 'wght' 300;
+    font-size: 2.5rem;
+    color: #1f6f8d;
   }
 
   h2 {
@@ -220,6 +266,25 @@ label {
 
   p {
     margin: 0;
-    color: #5f7488;
+    max-width: 26rem;
+    line-height: 1.6;
+  }
+}
+
+@media (max-width: 1120px) {
+  .atendimento-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .grid-2,
+  .atendimento-detalhe__header {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .atendimento-detalhe__header {
+    align-items: stretch;
   }
 }

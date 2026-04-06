@@ -9,11 +9,8 @@ import {
   TipoUsuario,
   UsuarioListaItem,
 } from '../interfaces/Usuario';
+import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
 import { QueryCacheService } from './query-cache.service';
-
-interface ErroApiResponse {
-  erro?: string;
-}
 
 export interface ListarUsuariosResponse {
   total: number;
@@ -52,15 +49,33 @@ export class UsuariosService {
     private readonly queryCache: QueryCacheService,
   ) {}
 
-  listarUsuarios(): Observable<ListarUsuariosResponse> {
-    return this.queryCache.getOrSet(this.cacheKeyListagem, () =>
-      this.http
-        .get<ListarUsuariosResponse>(this.apiUrl, { withCredentials: true })
-        .pipe(
-          catchError((error) =>
-            throwError(() => new Error(this.extrairMensagemErro(error?.error))),
+  listarUsuarios(forcarAtualizacao = false): Observable<ListarUsuariosResponse> {
+    return this.queryCache.getOrSet(
+      this.cacheKeyListagem,
+      () =>
+        this.http
+          .get<ListarUsuariosResponse>(this.apiUrl, { withCredentials: true })
+          .pipe(
+            catchError((error) =>
+              throwError(
+                () =>
+                  new Error(
+                    extrairMensagemErroApi(
+                      error?.error,
+                      'Nao foi possivel atualizar a senha. Tente novamente.',
+                    ),
+                  ),
+              ),
+            ),
           ),
-        ),
+      undefined,
+      forcarAtualizacao,
+    );
+  }
+
+  obterUsuariosEmCache(): UsuarioListaItem[] {
+    return (
+      this.queryCache.getSnapshot<ListarUsuariosResponse>(this.cacheKeyListagem)?.usuarios ?? []
     );
   }
 
@@ -77,13 +92,31 @@ export class UsuariosService {
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarUsuariosResponse>(this.cacheKeyListagem, (atual) => {
+            const usuariosAtuais = atual?.usuarios ?? [];
+            return {
+              total: (atual?.total ?? usuariosAtuais.length) + 1,
+              usuarios: [resposta.usuario, ...usuariosAtuais],
+            };
+          });
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(
+                  error?.error,
+                  'Nao foi possivel atualizar a senha. Tente novamente.',
+                ),
+              ),
+          ),
+        ),
       );
   }
 
   editarUsuario(
-    usuarioId: number | string,
+    usuarioId: string,
     payload: EditarUsuarioPayload,
   ): Observable<UsuarioAtualizadoResponse> {
     const body: Record<string, string> = {};
@@ -113,12 +146,36 @@ export class UsuariosService {
         },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarUsuariosResponse>(this.cacheKeyListagem, (atual) => {
+            const usuariosAtuais = atual?.usuarios ?? [];
+            const usuarioAtualizado: UsuarioListaItem = {
+              ...resposta.usuario,
+              id: resposta.usuario.id,
+            };
+            return {
+              total: atual?.total ?? usuariosAtuais.length,
+              usuarios: usuariosAtuais.map((item) =>
+                String(item.id) === String(usuarioId) ? usuarioAtualizado : item,
+              ),
+            };
+          });
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(
+                  error?.error,
+                  'Nao foi possivel atualizar a senha. Tente novamente.',
+                ),
+              ),
+          ),
+        ),
       );
   }
 
-  excluirUsuario(usuarioId: number | string): Observable<ExcluirUsuarioResponse> {
+  excluirUsuario(usuarioId: string): Observable<ExcluirUsuarioResponse> {
     return this.http
       .delete<ExcluirUsuarioResponse>(
         `${this.apiUrl}?id=${encodeURIComponent(String(usuarioId))}`,
@@ -127,8 +184,27 @@ export class UsuariosService {
         },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap(() => {
+          this.queryCache.updateSnapshot<ListarUsuariosResponse>(this.cacheKeyListagem, (atual) => {
+            const usuariosAtuais = atual?.usuarios ?? [];
+            const usuarios = usuariosAtuais.filter((item) => String(item.id) !== String(usuarioId));
+            return {
+              total: usuarios.length,
+              usuarios,
+            };
+          });
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(
+                  error?.error,
+                  'Nao foi possivel atualizar a senha. Tente novamente.',
+                ),
+              ),
+          ),
+        ),
       );
   }
 
@@ -157,16 +233,32 @@ export class UsuariosService {
         withCredentials: true,
       })
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarUsuariosResponse>(this.cacheKeyListagem, (atual) => {
+            const usuariosAtuais = atual?.usuarios ?? [];
+            const usuarioAtualizado: UsuarioListaItem = {
+              ...resposta.usuario,
+              id: resposta.usuario.id,
+            };
+            return {
+              total: atual?.total ?? usuariosAtuais.length,
+              usuarios: usuariosAtuais.map((item) =>
+                String(item.id) === String(usuarioId) ? usuarioAtualizado : item,
+              ),
+            };
+          });
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(
+                  error?.error,
+                  'Nao foi possivel atualizar a senha. Tente novamente.',
+                ),
+              ),
+          ),
+        ),
       );
-  }
-
-  private extrairMensagemErro(payload: ErroApiResponse | undefined): string {
-    if (payload && typeof payload.erro === 'string' && payload.erro.trim()) {
-      return payload.erro;
-    }
-
-    return 'Nao foi possivel atualizar a senha. Tente novamente.';
   }
 }

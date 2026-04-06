@@ -1,8 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { catchError, forkJoin, map, of } from 'rxjs';
+import { AgendaConsulta } from '../../interfaces/Agenda';
 import {
   ConvenioResumo,
   FaturamentoPeriodo,
@@ -11,19 +22,80 @@ import {
   ProcedimentoResumo,
   ProximaConsulta,
 } from '../../interfaces/Dashboard';
+import { PacienteItem } from '../../interfaces/Paciente';
+import { ProcedimentoRealizadoItem } from '../../interfaces/ProcedimentoRealizado';
+import { AgendaService } from '../../services/agenda.service';
 import { AuthService } from '../../services/auth.service';
+import { PacientesService } from '../../services/pacientes.service';
+import {
+  ListarProcedimentosRealizadosResponse,
+  ProcedimentosRealizadosService,
+} from '../../services/procedimentos-realizados.service';
+import { TratamentoItem, TratamentosService } from '../../services/tratamentos.service';
 
 Chart.register(...registerables);
 
-function gerarSerieFaturamento(
-  rotulos: string[],
-  base: number,
-  incremento: number,
-): GraficoFaturamentoItem[] {
-  return rotulos.map((rotulo, indice) => ({
-    rotulo,
-    valor: base + incremento * indice + Math.round(Math.sin((indice + 1) * 0.7) * 1200),
-  }));
+function criarPeriodoFaturamentoVazio(): Record<PeriodoFaturamento, FaturamentoPeriodo> {
+  return {
+    mensal: { valor: 0, meta: 0, crescimento: 0 },
+    trimestral: { valor: 0, meta: 0, crescimento: 0 },
+    anual: { valor: 0, meta: 0, crescimento: 0 },
+  };
+}
+
+function criarGraficoFaturamentoVazio(): Record<PeriodoFaturamento, GraficoFaturamentoItem[]> {
+  return {
+    mensal: [],
+    trimestral: [],
+    anual: [],
+  };
+}
+
+function formatarMesAbreviado(data: Date): string {
+  return new Intl.DateTimeFormat('pt-BR', { month: 'short' })
+    .format(data)
+    .replace('.', '')
+    .replace(/^./, (caractere) => caractere.toUpperCase());
+}
+
+function mesmaDataLocal(primeira: Date, segunda: Date): boolean {
+  return (
+    primeira.getFullYear() === segunda.getFullYear() &&
+    primeira.getMonth() === segunda.getMonth() &&
+    primeira.getDate() === segunda.getDate()
+  );
+}
+
+function mesmoMesAno(primeira: Date, segunda: Date): boolean {
+  return (
+    primeira.getFullYear() === segunda.getFullYear() && primeira.getMonth() === segunda.getMonth()
+  );
+}
+
+function converterValorMonetario(valor: string): number {
+  const texto = String(valor ?? '').trim();
+
+  if (!texto) {
+    return 0;
+  }
+
+  if (texto.includes(',') && texto.includes('.')) {
+    return Number.parseFloat(texto.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+
+  if (texto.includes(',')) {
+    return Number.parseFloat(texto.replace(',', '.')) || 0;
+  }
+
+  return Number.parseFloat(texto) || 0;
+}
+
+function calcularCrescimento(atual: number, anterior: number): number {
+  if (anterior <= 0) {
+    return atual > 0 ? 100 : 0;
+  }
+
+  return Math.round(((atual - anterior) / anterior) * 100);
 }
 
 @Component({
@@ -33,91 +105,42 @@ function gerarSerieFaturamento(
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('faturamentoCanvas') private faturamentoCanvas?: ElementRef<HTMLCanvasElement>;
 
-  readonly consultasHoje = 18;
-  readonly confirmacoesHoje = 13;
-  readonly cancelamentosHoje = 2;
-  readonly pacientesAtivos = 248;
-  readonly pacientesNovosNoMes = 15;
-  readonly periodosFaturamento: Record<PeriodoFaturamento, FaturamentoPeriodo> = {
-    mensal: { valor: 42870, meta: 60000, crescimento: 12 },
-    trimestral: { valor: 123540, meta: 180000, crescimento: 8 },
-    anual: { valor: 512780, meta: 720000, crescimento: 17 },
-  };
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly authService = inject(AuthService);
+  private readonly agendaService = inject(AgendaService);
+  private readonly pacientesService = inject(PacientesService);
+  private readonly procedimentosRealizadosService = inject(ProcedimentosRealizadosService);
+  private readonly tratamentosService = inject(TratamentosService);
 
-  readonly graficoFaturamento: Record<PeriodoFaturamento, GraficoFaturamentoItem[]> = {
-    mensal: gerarSerieFaturamento(
-      Array.from({ length: 31 }, (_, indice) => String(indice + 1)),
-      1200,
-      75,
-    ),
-    trimestral: [
-      { rotulo: 'Jan', valor: 35200 },
-      { rotulo: 'Fev', valor: 38200 },
-      { rotulo: 'Mar', valor: 42870 },
-    ],
-    anual: [
-      { rotulo: 'Jan', valor: 35200 },
-      { rotulo: 'Fev', valor: 38200 },
-      { rotulo: 'Mar', valor: 42870 },
-      { rotulo: 'Abr', valor: 45120 },
-      { rotulo: 'Mai', valor: 46790 },
-      { rotulo: 'Jun', valor: 48920 },
-      { rotulo: 'Jul', valor: 50340 },
-      { rotulo: 'Ago', valor: 52180 },
-      { rotulo: 'Set', valor: 54460 },
-      { rotulo: 'Out', valor: 55980 },
-      { rotulo: 'Nov', valor: 57840 },
-      { rotulo: 'Dez', valor: 60340 },
-    ],
-  };
+  carregandoDados = false;
+  erroDados = '';
+
+  consultasHoje = 0;
+  confirmacoesHoje = 0;
+  cancelamentosHoje = 0;
+  pacientesAtivos = 0;
+  pacientesNovosNoMes = 0;
+
+  periodosFaturamento: Record<PeriodoFaturamento, FaturamentoPeriodo> =
+    criarPeriodoFaturamentoVazio();
+  graficoFaturamento: Record<PeriodoFaturamento, GraficoFaturamentoItem[]> =
+    criarGraficoFaturamentoVazio();
 
   periodoFaturamentoSelecionado: PeriodoFaturamento = 'mensal';
   ocultarFaturamento = false;
 
-  readonly proximasConsultas: ProximaConsulta[] = [
-    {
-      id: 'c-1001',
-      horario: '09:30',
-      paciente: 'Mariana Souza',
-      dentista: 'Dra. Beatriz',
-      procedimento: 'Avaliacao de rotina',
-    },
-    {
-      id: 'c-1002',
-      horario: '10:15',
-      paciente: 'Carlos Andrade',
-      dentista: 'Dra. Luciana',
-      procedimento: 'Profilaxia',
-    },
-    {
-      id: 'c-1003',
-      horario: '11:00',
-      paciente: 'Ana Paula Lima',
-      dentista: 'Dra. Beatriz',
-      procedimento: 'Revisao ortodontica',
-    },
-  ];
-
-  readonly procedimentosMaisRealizados: ProcedimentoResumo[] = [
-    { nome: 'Profilaxia', total: 34, percentual: 29 },
-    { nome: 'Avaliacao inicial', total: 27, percentual: 23 },
-    { nome: 'Restauracao', total: 21, percentual: 18 },
-    { nome: 'Canal', total: 12, percentual: 10 },
-  ];
-
-  readonly conveniosUtilizados: ConvenioResumo[] = [
-    { nome: 'Particular', consultas: 41, percentual: 35 },
-    { nome: 'OdontoPlus', consultas: 32, percentual: 27 },
-    { nome: 'DentalLife', consultas: 28, percentual: 24 },
-    { nome: 'Sorrir Bem', consultas: 16, percentual: 14 },
-  ];
+  proximasConsultas: ProximaConsulta[] = [];
+  procedimentosMaisRealizados: ProcedimentoResumo[] = [];
+  conveniosUtilizados: ConvenioResumo[] = [];
 
   private faturamentoChart?: Chart<'line', number[], string>;
 
-  constructor(private readonly authService: AuthService) {}
+  ngOnInit(): void {
+    this.carregarDashboard();
+  }
 
   ngAfterViewInit(): void {
     this.criarOuAtualizarGraficoFaturamento();
@@ -216,6 +239,385 @@ export class DashboardComponent {
   aoMudarPeriodoFaturamento(periodo: PeriodoFaturamento): void {
     this.periodoFaturamentoSelecionado = periodo;
     this.criarOuAtualizarGraficoFaturamento();
+  }
+
+  private carregarDashboard(): void {
+    this.carregandoDados = true;
+    this.erroDados = '';
+
+    forkJoin({
+      consultas: this.agendaService
+        .listarConsultas()
+        .pipe(catchError(() => of([] as AgendaConsulta[]))),
+      pacientes: this.pacientesService.listarPacientes().pipe(
+        map((resposta) => resposta.pacientes ?? []),
+        catchError(() => of([] as PacienteItem[])),
+      ),
+      procedimentos: this.procedimentosRealizadosService.listarProcedimentosRealizados().pipe(
+        map((resposta) => this.mapearProcedimentosRealizados(resposta)),
+        catchError(() => of([] as ProcedimentoRealizadoItem[])),
+      ),
+      tratamentos: this.tratamentosService.listarTratamentos().pipe(
+        map((resposta) => resposta.tratamentos ?? []),
+        catchError(() => of([] as TratamentoItem[])),
+      ),
+    }).subscribe({
+      next: ({ consultas, pacientes, procedimentos, tratamentos }) => {
+        this.aplicarDadosDashboard(consultas, pacientes, procedimentos, tratamentos);
+        this.carregandoDados = false;
+        this.cdr.markForCheck();
+        this.criarOuAtualizarGraficoFaturamento();
+      },
+      error: () => {
+        this.carregandoDados = false;
+        this.erroDados = 'Nao foi possivel carregar os dados do dashboard.';
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private aplicarDadosDashboard(
+    consultas: AgendaConsulta[],
+    pacientes: PacienteItem[],
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+  ): void {
+    const agora = new Date();
+
+    this.consultasHoje = consultas.filter((consulta) =>
+      mesmaDataLocal(new Date(consulta.dataConsulta), agora),
+    ).length;
+
+    this.confirmacoesHoje = consultas.filter(
+      (consulta) =>
+        mesmaDataLocal(new Date(consulta.dataConsulta), agora) && consulta.status === 'realizado',
+    ).length;
+
+    this.cancelamentosHoje = consultas.filter(
+      (consulta) =>
+        mesmaDataLocal(new Date(consulta.dataConsulta), agora) && consulta.status === 'cancelado',
+    ).length;
+
+    this.pacientesAtivos = pacientes.length;
+    this.pacientesNovosNoMes = pacientes.filter((paciente) =>
+      mesmoMesAno(new Date(paciente.criadoEm), agora),
+    ).length;
+
+    this.proximasConsultas = this.montarProximasConsultas(consultas, agora);
+    this.procedimentosMaisRealizados = this.montarProcedimentosMaisRealizados(procedimentos, agora);
+    this.conveniosUtilizados = this.montarConveniosUtilizados(consultas, agora);
+
+    this.periodosFaturamento = this.calcularPeriodosFaturamento(procedimentos, tratamentos, agora);
+    this.graficoFaturamento = this.calcularGraficosFaturamento(procedimentos, tratamentos, agora);
+  }
+
+  private montarProximasConsultas(consultas: AgendaConsulta[], agora: Date): ProximaConsulta[] {
+    return consultas
+      .filter(
+        (consulta) =>
+          consulta.status === 'agendado' &&
+          new Date(consulta.dataConsulta).getTime() >= agora.getTime(),
+      )
+      .sort(
+        (primeira, segunda) =>
+          new Date(primeira.dataConsulta).getTime() - new Date(segunda.dataConsulta).getTime(),
+      )
+      .slice(0, 3)
+      .map((consulta) => {
+        const dataConsulta = new Date(consulta.dataConsulta);
+
+        return {
+          id: consulta.id,
+          horario: new Intl.DateTimeFormat('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }).format(dataConsulta),
+          paciente: consulta.pacienteNome,
+          dentista: consulta.profissionalNome,
+          procedimento:
+            consulta.observacoes?.trim() || consulta.convenioNome || 'Consulta agendada',
+        };
+      });
+  }
+
+  private montarProcedimentosMaisRealizados(
+    procedimentos: ProcedimentoRealizadoItem[],
+    agora: Date,
+  ): ProcedimentoResumo[] {
+    const procedimentosMes = procedimentos.filter((procedimento) =>
+      mesmoMesAno(new Date(procedimento.dataProcedimento), agora),
+    );
+    const totalProcedimentos = procedimentosMes.length;
+    const porNome = new Map<string, number>();
+
+    for (const procedimento of procedimentosMes) {
+      const nome = procedimento.tratamentoNome?.trim() || 'Tratamento';
+      porNome.set(nome, (porNome.get(nome) ?? 0) + 1);
+    }
+
+    return Array.from(porNome.entries())
+      .sort((primeiro, segundo) => segundo[1] - primeiro[1])
+      .slice(0, 4)
+      .map(([nome, total]) => ({
+        nome,
+        total,
+        percentual: totalProcedimentos > 0 ? Math.round((total / totalProcedimentos) * 100) : 0,
+      }));
+  }
+
+  private montarConveniosUtilizados(consultas: AgendaConsulta[], agora: Date): ConvenioResumo[] {
+    const consultasMes = consultas.filter((consulta) =>
+      mesmoMesAno(new Date(consulta.dataConsulta), agora),
+    );
+    const totalConsultas = consultasMes.length;
+    const porConvenio = new Map<string, number>();
+
+    for (const consulta of consultasMes) {
+      const nome = consulta.convenioNome?.trim() || 'Particular';
+      porConvenio.set(nome, (porConvenio.get(nome) ?? 0) + 1);
+    }
+
+    return Array.from(porConvenio.entries())
+      .sort((primeiro, segundo) => segundo[1] - primeiro[1])
+      .slice(0, 4)
+      .map(([nome, consultas]) => ({
+        nome,
+        consultas,
+        percentual: totalConsultas > 0 ? Math.round((consultas / totalConsultas) * 100) : 0,
+      }));
+  }
+
+  private calcularPeriodosFaturamento(
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+    agora: Date,
+  ): Record<PeriodoFaturamento, FaturamentoPeriodo> {
+    const valorMensalAtual = this.calcularReceitaMes(
+      procedimentos,
+      tratamentos,
+      agora.getFullYear(),
+      agora.getMonth(),
+    );
+    const valorMensalAnterior = this.calcularReceitaMes(
+      procedimentos,
+      tratamentos,
+      agora.getFullYear(),
+      agora.getMonth() - 1,
+    );
+
+    const valorTrimestralAtual = this.calcularReceitaUltimosMeses(
+      procedimentos,
+      tratamentos,
+      agora,
+      3,
+    );
+    const valorTrimestralAnterior = this.calcularReceitaUltimosMeses(
+      procedimentos,
+      tratamentos,
+      this.obterDataComMesDeslocado(agora, -3),
+      3,
+    );
+
+    const valorAnualAtual = this.calcularReceitaAno(
+      procedimentos,
+      tratamentos,
+      agora.getFullYear(),
+    );
+    const valorAnualAnterior = this.calcularReceitaAno(
+      procedimentos,
+      tratamentos,
+      agora.getFullYear() - 1,
+    );
+
+    return {
+      mensal: {
+        valor: valorMensalAtual,
+        meta: Math.max(Math.round(valorMensalAtual * 1.15), 1),
+        crescimento: calcularCrescimento(valorMensalAtual, valorMensalAnterior),
+      },
+      trimestral: {
+        valor: valorTrimestralAtual,
+        meta: Math.max(Math.round(valorTrimestralAtual * 1.15), 1),
+        crescimento: calcularCrescimento(valorTrimestralAtual, valorTrimestralAnterior),
+      },
+      anual: {
+        valor: valorAnualAtual,
+        meta: Math.max(Math.round(valorAnualAtual * 1.15), 1),
+        crescimento: calcularCrescimento(valorAnualAtual, valorAnualAnterior),
+      },
+    };
+  }
+
+  private calcularGraficosFaturamento(
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+    agora: Date,
+  ): Record<PeriodoFaturamento, GraficoFaturamentoItem[]> {
+    return {
+      mensal: this.montarSerieMensal(procedimentos, tratamentos, agora),
+      trimestral: this.montarSerieTrimestral(procedimentos, tratamentos, agora),
+      anual: this.montarSerieAnual(procedimentos, tratamentos, agora),
+    };
+  }
+
+  private montarSerieMensal(
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+    agora: Date,
+  ): GraficoFaturamentoItem[] {
+    const diasNoMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).getDate();
+    const valores = Array.from({ length: diasNoMes }, (_, indice) => ({
+      rotulo: String(indice + 1),
+      valor: 0,
+    }));
+
+    for (const procedimento of procedimentos) {
+      const data = new Date(procedimento.dataProcedimento);
+      if (data.getFullYear() !== agora.getFullYear() || data.getMonth() !== agora.getMonth()) {
+        continue;
+      }
+
+      const indice = data.getDate() - 1;
+      if (indice < 0 || indice >= valores.length) {
+        continue;
+      }
+
+      const itemSerie = valores[indice];
+      if (!itemSerie) {
+        continue;
+      }
+
+      itemSerie.valor += this.obterValorTratamento(procedimento.tratamentoId, tratamentos);
+    }
+
+    return valores;
+  }
+
+  private montarSerieTrimestral(
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+    agora: Date,
+  ): GraficoFaturamentoItem[] {
+    const datas = [
+      this.obterDataComMesDeslocado(agora, -2),
+      this.obterDataComMesDeslocado(agora, -1),
+      agora,
+    ];
+
+    return datas.map((data) => ({
+      rotulo: formatarMesAbreviado(data),
+      valor: this.calcularReceitaMes(
+        procedimentos,
+        tratamentos,
+        data.getFullYear(),
+        data.getMonth(),
+      ),
+    }));
+  }
+
+  private montarSerieAnual(
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+    agora: Date,
+  ): GraficoFaturamentoItem[] {
+    return Array.from({ length: 12 }, (_, indice) => ({
+      rotulo: formatarMesAbreviado(new Date(agora.getFullYear(), indice, 1)),
+      valor: this.calcularReceitaMes(procedimentos, tratamentos, agora.getFullYear(), indice),
+    }));
+  }
+
+  private calcularReceitaAno(
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+    ano: number,
+  ): number {
+    return procedimentos
+      .filter((procedimento) => new Date(procedimento.dataProcedimento).getFullYear() === ano)
+      .reduce(
+        (total, procedimento) =>
+          total + this.obterValorTratamento(procedimento.tratamentoId, tratamentos),
+        0,
+      );
+  }
+
+  private calcularReceitaUltimosMeses(
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+    dataReferencia: Date,
+    quantidadeMeses: number,
+  ): number {
+    const periodoInicial = new Date(dataReferencia.getFullYear(), dataReferencia.getMonth(), 1);
+    periodoInicial.setMonth(periodoInicial.getMonth() - (quantidadeMeses - 1));
+
+    const periodoFinal = new Date(
+      dataReferencia.getFullYear(),
+      dataReferencia.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    return procedimentos
+      .filter((procedimento) => {
+        const data = new Date(procedimento.dataProcedimento);
+        return (
+          data.getTime() >= periodoInicial.getTime() && data.getTime() <= periodoFinal.getTime()
+        );
+      })
+      .reduce(
+        (total, procedimento) =>
+          total + this.obterValorTratamento(procedimento.tratamentoId, tratamentos),
+        0,
+      );
+  }
+
+  private calcularReceitaMes(
+    procedimentos: ProcedimentoRealizadoItem[],
+    tratamentos: TratamentoItem[],
+    ano: number,
+    mes: number,
+  ): number {
+    return procedimentos
+      .filter((procedimento) => {
+        const data = new Date(procedimento.dataProcedimento);
+        return data.getFullYear() === ano && data.getMonth() === mes;
+      })
+      .reduce(
+        (total, procedimento) =>
+          total + this.obterValorTratamento(procedimento.tratamentoId, tratamentos),
+        0,
+      );
+  }
+
+  private obterValorTratamento(tratamentoId: string, tratamentos: TratamentoItem[]): number {
+    const tratamento = tratamentos.find((item) => item.id === tratamentoId);
+    if (!tratamento) {
+      return 0;
+    }
+
+    return converterValorMonetario(tratamento.valor);
+  }
+
+  private obterDataComMesDeslocado(data: Date, deslocamento: number): Date {
+    return new Date(data.getFullYear(), data.getMonth() + deslocamento, 1);
+  }
+
+  private mapearProcedimentosRealizados(
+    resposta: ListarProcedimentosRealizadosResponse,
+  ): ProcedimentoRealizadoItem[] {
+    return (resposta.procedimentos_realizados ?? []).map((item) => ({
+      id: item.id,
+      consultaId: item.consulta_id,
+      tratamentoId: item.tratamento_id,
+      tratamentoNome: item.tratamento_nome ?? 'Tratamento',
+      dente: item.dente,
+      face: item.face,
+      dataProcedimento: item.data_procedimento,
+      observacoes: item.observacoes ?? '',
+      criadoEm: item.criado_em,
+    }));
   }
 
   private criarOuAtualizarGraficoFaturamento(): void {

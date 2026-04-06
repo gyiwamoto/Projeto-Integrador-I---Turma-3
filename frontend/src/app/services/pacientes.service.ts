@@ -3,11 +3,8 @@ import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { PacienteItem, SalvarPacientePayload } from '../interfaces/Paciente';
+import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
 import { QueryCacheService } from './query-cache.service';
-
-interface ErroApiResponse {
-  erro?: string;
-}
 
 interface PacienteApiItem {
   id: string;
@@ -17,7 +14,7 @@ interface PacienteApiItem {
   telefone: string | null;
   whatsapp_push: boolean;
   email: string | null;
-  convenio_id: string | null;
+  convenio_cnpj: string | null;
   convenio_nome: string | null;
   numero_carteirinha: string | null;
   criado_em: string;
@@ -49,22 +46,34 @@ export class PacientesService {
     private readonly queryCache: QueryCacheService,
   ) {}
 
-  listarPacientes(): Observable<ListarPacientesResponse> {
-    return this.queryCache.getOrSet(this.cacheKeyListagem, () =>
-      this.http
-        .get<{
-          total: number;
-          pacientes: PacienteApiItem[];
-        }>(this.apiUrl, { withCredentials: true })
-        .pipe(
-          map((resposta) => ({
-            total: resposta.total,
-            pacientes: (resposta.pacientes ?? []).map((item) => this.mapearPaciente(item)),
-          })),
-          catchError((error) =>
-            throwError(() => new Error(this.extrairMensagemErro(error?.error))),
+  listarPacientes(forcarAtualizacao = false): Observable<ListarPacientesResponse> {
+    return this.queryCache.getOrSet(
+      this.cacheKeyListagem,
+      () =>
+        this.http
+          .get<{
+            total: number;
+            pacientes: PacienteApiItem[];
+          }>(this.apiUrl, { withCredentials: true })
+          .pipe(
+            map((resposta) => ({
+              total: resposta.total,
+              pacientes: (resposta.pacientes ?? []).map((item) => this.mapearPaciente(item)),
+            })),
+            catchError((error) =>
+              throwError(
+                () =>
+                  new Error(
+                    extrairMensagemErroApi(
+                      error?.error,
+                      'Nao foi possivel processar os pacientes.',
+                    ),
+                  ),
+              ),
+            ),
           ),
-        ),
+      undefined,
+      forcarAtualizacao,
     );
   }
 
@@ -74,22 +83,40 @@ export class PacientesService {
         this.apiUrl,
         {
           nome: payload.nome.trim(),
-          data_nascimento: payload.dataNascimento || null,
+          data_nascimento: this.normalizarDataNascimento(payload.dataNascimento),
           telefone: payload.telefone.trim() || null,
           whatsapp_push: payload.whatsappPush,
           email: payload.email.trim() || null,
-          convenio_id: payload.convenioId || null,
+          convenio_cnpj: payload.convenioId || null,
           numero_carteirinha: payload.numeroCarteirinha.trim() || null,
         },
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
         map((resposta) => ({
           mensagem: resposta.mensagem,
           paciente: this.mapearPaciente(resposta.paciente),
         })),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarPacientesResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const pacientesAtuais = atual?.pacientes ?? [];
+              return {
+                total: (atual?.total ?? pacientesAtuais.length) + 1,
+                pacientes: [resposta.paciente, ...pacientesAtuais],
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os pacientes.'),
+              ),
+          ),
+        ),
       );
   }
 
@@ -102,22 +129,42 @@ export class PacientesService {
         `${this.apiUrl}?id=${encodeURIComponent(pacienteId)}`,
         {
           nome: payload.nome.trim(),
-          data_nascimento: payload.dataNascimento || null,
+          data_nascimento: this.normalizarDataNascimento(payload.dataNascimento),
           telefone: payload.telefone.trim() || null,
           whatsapp_push: payload.whatsappPush,
           email: payload.email.trim() || null,
-          convenio_id: payload.convenioId || null,
+          convenio_cnpj: payload.convenioId || null,
           numero_carteirinha: payload.numeroCarteirinha.trim() || null,
         },
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
         map((resposta) => ({
           mensagem: resposta.mensagem,
           paciente: this.mapearPaciente(resposta.paciente),
         })),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarPacientesResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const pacientesAtuais = atual?.pacientes ?? [];
+              return {
+                total: atual?.total ?? pacientesAtuais.length,
+                pacientes: pacientesAtuais.map((item) =>
+                  item.id === resposta.paciente.id ? resposta.paciente : item,
+                ),
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os pacientes.'),
+              ),
+          ),
+        ),
       );
   }
 
@@ -127,8 +174,27 @@ export class PacientesService {
         withCredentials: true,
       })
       .pipe(
-        tap(() => this.queryCache.invalidate(this.cacheKeyListagem)),
-        catchError((error) => throwError(() => new Error(this.extrairMensagemErro(error?.error)))),
+        tap(() => {
+          this.queryCache.updateSnapshot<ListarPacientesResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const pacientesAtuais = atual?.pacientes ?? [];
+              const pacientes = pacientesAtuais.filter((item) => item.id !== pacienteId);
+              return {
+                total: pacientes.length,
+                pacientes,
+              };
+            },
+          );
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os pacientes.'),
+              ),
+          ),
+        ),
       );
   }
 
@@ -137,22 +203,56 @@ export class PacientesService {
       id: item.id,
       codigoPaciente: item.codigo_paciente,
       nome: item.nome,
-      dataNascimento: item.data_nascimento ?? '',
+      dataNascimento: this.formatarDataNascimentoBr(item.data_nascimento) ?? '',
       telefone: item.telefone ?? '',
       whatsappPush: Boolean(item.whatsapp_push),
       email: item.email ?? '',
-      convenioId: item.convenio_id ?? '',
+      convenioId: item.convenio_cnpj ?? '',
       convenioNome: item.convenio_nome ?? '',
       numeroCarteirinha: item.numero_carteirinha ?? '',
       criadoEm: item.criado_em,
     };
   }
 
-  private extrairMensagemErro(payload: ErroApiResponse | undefined): string {
-    if (payload && typeof payload.erro === 'string' && payload.erro.trim()) {
-      return payload.erro;
+  private normalizarDataNascimento(valor: string | null | undefined): string | null {
+    if (!valor || !valor.trim()) {
+      return null;
     }
 
-    return 'Nao foi possivel processar os pacientes.';
+    const texto = valor.trim();
+
+    const formatoBr = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (formatoBr) {
+      const dia = formatoBr[1];
+      const mes = formatoBr[2];
+      const ano = formatoBr[3];
+      return `${ano}-${mes}-${dia}`;
+    }
+
+    const trechoData = texto.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+    if (trechoData) {
+      return trechoData;
+    }
+
+    const data = new Date(texto);
+    if (Number.isNaN(data.getTime())) {
+      return null;
+    }
+
+    return data.toISOString().slice(0, 10);
+  }
+
+  private formatarDataNascimentoBr(valor: string | null | undefined): string | null {
+    const normalizada = this.normalizarDataNascimento(valor);
+    if (!normalizada) {
+      return null;
+    }
+
+    const [ano, mes, dia] = normalizada.split('-');
+    if (!ano || !mes || !dia) {
+      return null;
+    }
+
+    return `${dia}/${mes}/${ano}`;
   }
 }

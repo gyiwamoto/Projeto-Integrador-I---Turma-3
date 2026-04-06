@@ -10,10 +10,27 @@
 <app-modal [aberto]="modalAcaoAberto" titulo="O que deseja fazer?" descricao="Escolha a acao para o horario selecionado"
   [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="true" (fechar)="fecharModalAcao()">
   <div class="acao-modal">
-    <p class="slot-info" *ngIf="slotSelecionado">
-      {{ nomeDiaSelecionado }}, {{ diaSelecionado | number:'2.0-0' }} de {{ mesAtual }}
-      as {{ slotSelecionado.hora }}:{{ slotSelecionado.min === 0 ? '00' : slotSelecionado.min }}
-    </p>
+    <div class="slot-destaque" *ngIf="slotSelecionado">
+      <span class="slot-destaque__rotulo">Horário selecionado</span>
+      <strong class="slot-destaque__hora">
+        {{ slotSelecionado.hora }}:{{ slotSelecionado.min === 0 ? '00' : slotSelecionado.min }}
+      </strong>
+      <p class="slot-destaque__data">
+        {{ nomeDiaSelecionado }}, {{ diaSelecionado | number:'2.0-0' }} de {{ mesAtual }}
+      </p>
+    </div>
+
+    <div class="resumo-consulta" *ngIf="pacientePreSelecionado || pacienteSelecionado">
+      <span class="resumo-consulta__rotulo">Paciente vinculado</span>
+      <strong>{{ pacienteSelecionado?.nome ?? pacientePreSelecionado?.nome }}</strong>
+      <p>
+        {{ pacienteSelecionado?.codigoPaciente ?? pacientePreSelecionado?.codigoPaciente ?? 'Sem código' }}
+        <span *ngIf="(pacienteSelecionado?.telefone ?? pacientePreSelecionado?.telefone) as telefone">
+          · {{ telefone }}
+        </span>
+      </p>
+    </div>
+
     <div class="opcoes">
       <button class="opcao-btn primary" (click)="escolherAgendar()">
         <span class="opcao-btn__titulo">Agendar paciente</span>
@@ -42,7 +59,7 @@
       <div class="paciente-avatar">{{ p.nome[0] }}</div>
       <div class="paciente-info">
         <span class="paciente-nome">{{ p.nome }}</span>
-        <span class="paciente-detalhe">ID {{ p.id }} · {{ p.telefone || 'sem telefone' }}</span>
+        <span class="paciente-detalhe">{{ p.codigoPaciente }} · {{ p.telefone || 'sem telefone' }}</span>
       </div>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="paciente-arrow">
         <polyline points="9 18 15 12 9 6" />
@@ -52,14 +69,28 @@
   </div>
 </app-modal>
 
-<app-modal [aberto]="modalConfirmAberto" titulo="Confirmar agendamento" descricao="Revise os dados"
+<app-modal [aberto]="modalConfirmAberto" titulo="Confirmar agendamento" descricao="Revise os dados antes de salvar"
   [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="true" (fechar)="fecharModalConfirmacao()">
-  <p>
-    <strong>{{ pacienteSelecionado?.nome }}</strong><br>
-    {{ nomeDiaSelecionado }}, {{ diaSelecionado | number:'2.0-0' }} de {{ mesAtual }}<br>
-    as {{ slotSelecionado?.hora }}:{{ slotSelecionado?.min === 0 ? '00' : slotSelecionado?.min }}<br>
-    {{ nomeProfissionalSelecionado }}
-  </p>
+  <div class="confirmacao-modal">
+    <div class="confirmacao-modal__horario">
+      <span class="confirmacao-modal__rotulo">Horário</span>
+      <strong>{{ slotSelecionado?.hora }}:{{ slotSelecionado?.min === 0 ? '00' : slotSelecionado?.min }}</strong>
+      <p>{{ nomeDiaSelecionado }}, {{ diaSelecionado | number:'2.0-0' }} de {{ mesAtual }}</p>
+    </div>
+
+    <div class="confirmacao-modal__dados">
+      <div>
+        <span>Paciente</span>
+        <strong>{{ pacienteSelecionado?.nome }}</strong>
+        <small>{{ pacienteSelecionado?.codigoPaciente || 'Sem código' }}</small>
+      </div>
+      <div>
+        <span>Profissional</span>
+        <strong>{{ nomeProfissionalSelecionado }}</strong>
+        <small>Agenda vinculada ao atendimento</small>
+      </div>
+    </div>
+  </div>
   <div class="modal-actions">
     <button class="btn-confirm" (click)="confirmarAgendamento()">Confirmar</button>
     <button class="btn-cancel" (click)="fecharModalConfirmacao()">Cancelar</button>
