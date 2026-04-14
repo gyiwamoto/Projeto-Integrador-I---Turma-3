@@ -74,3 +74,5 @@ describe('/api/auth', () => {
     expect(mockedObterSessaoAutenticada).not.toHaveBeenCalled();
   });
 });
+
+

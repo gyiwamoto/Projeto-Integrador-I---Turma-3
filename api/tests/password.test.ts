@@ -36,3 +36,5 @@ describe('password utils', () => {
 		await expect(gerarSenhaHash('123')).rejects.toThrow('A senha precisa ter pelo menos 6 caracteres.');
 	});
 });
+
+

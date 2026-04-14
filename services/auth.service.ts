@@ -216,3 +216,5 @@ export async function logout(req: VercelRequest, res: VercelResponse) {
 
   return res.status(200).json({ mensagem: 'Logout realizado com sucesso.' });
 }
+
+

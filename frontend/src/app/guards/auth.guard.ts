@@ -17,7 +17,7 @@ export const loginGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  return authService.validarSessao(true).pipe(
+  return authService.validarSessao().pipe(
     map((autenticado) => (autenticado ? router.createUrlTree(['/dashboard']) : true)),
     catchError(() => of(true)),
   );

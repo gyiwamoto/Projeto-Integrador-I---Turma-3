@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
-import { QueryCacheService } from './query-cache.service';
+import { CacheStoreService } from './cache-store.service';
 
 interface UsuarioAutenticado {
   id: string;
@@ -39,7 +39,7 @@ export class AuthService {
 
   constructor(
     private readonly http: HttpClient,
-    private readonly queryCache: QueryCacheService,
+    private readonly queryCache: CacheStoreService,
   ) {
     this.hidratarSessaoDoStorage();
   }

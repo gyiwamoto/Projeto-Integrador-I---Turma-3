@@ -108,6 +108,7 @@ describe('loginGuard', () => {
 
     expect(resultado).toBe(true);
     expect(routerSpy.createUrlTree).not.toHaveBeenCalled();
+    expect(AuthServiceSpy.validarSessao).toHaveBeenCalledWith();
   });
 
   it('redireciona para dashboard quando ja autenticado', async () => {
@@ -131,6 +132,17 @@ describe('loginGuard', () => {
     );
 
     expect(resultado).toBe(true);
+  });
+
+  it('nao chama GET no login quando nao ha sessao local', async () => {
+    AuthServiceSpy.validarSessao.mockReturnValue(of(false));
+
+    await resolverResultadoGuard(
+      TestBed.runInInjectionContext(() => loginGuard({} as any, {} as any)),
+    );
+
+    expect(AuthServiceSpy.validarSessao).toHaveBeenCalledTimes(1);
+    expect(AuthServiceSpy.validarSessao).toHaveBeenCalledWith();
   });
 });
 
