@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
@@ -86,6 +86,7 @@ export class AgendaService {
   private readonly cacheKeyPacientes = 'pacientes:list';
   private readonly ttlConsultasMs = 45 * 1000;
   private readonly ttlPacientesMs = 3 * 60 * 1000;
+  private ultimaChaveConsultas = this.cacheKeyConsultas;
 
   constructor(
     private readonly http: HttpClient,
@@ -112,13 +113,31 @@ export class AgendaService {
     };
   }
 
+  private montarChaveCacheConsultas(
+    escopo: 'geral' | 'atendimento',
+    intervalo?: IntervaloConsulta,
+  ): string {
+    const inicio = intervalo?.dataInicio?.trim() || '-';
+    const fim = intervalo?.dataFim?.trim() || '-';
+    return `${this.cacheKeyConsultas}:${escopo}:${inicio}:${fim}`;
+  }
+
+  private invalidarCacheConsultas(): void {
+    const entradas = this.queryCache.entriesByPrefix<AgendaConsulta[]>(this.cacheKeyConsultas);
+    for (const entrada of entradas) {
+      this.queryCache.invalidate(entrada.key);
+    }
+
+    this.queryCache.invalidate(this.cacheKeyConsultas);
+  }
+
   listarConsultas(
     forcarAtualizacao = false,
     escopo: 'geral' | 'atendimento' = 'geral',
     intervalo?: IntervaloConsulta,
   ): Observable<AgendaConsulta[]> {
-    // Chave simples de cache
-    const chaveCache = this.cacheKeyConsultas;
+    const chaveCache = this.montarChaveCacheConsultas(escopo, intervalo);
+    this.ultimaChaveConsultas = chaveCache;
 
     let params = new HttpParams();
     if (escopo === 'atendimento') {
@@ -131,6 +150,19 @@ export class AgendaService {
       params = params.set('data_fim', intervalo.dataFim);
     }
 
+    if (forcarAtualizacao) {
+      // Evita resposta stale de cache HTTP em recargas apos agendamento/reagendamento.
+      params = params.set('_refresh', String(Date.now()));
+    }
+
+    const headers = forcarAtualizacao
+      ? new HttpHeaders({
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        })
+      : undefined;
+
     return this.queryCache.getOrSet(
       chaveCache,
       () =>
@@ -138,6 +170,7 @@ export class AgendaService {
           .get<ConsultasApiResponse>(this.apiConsultasUrl, {
             withCredentials: true,
             params,
+            headers,
           })
           .pipe(
             map((resposta) =>
@@ -161,7 +194,7 @@ export class AgendaService {
   }
 
   obterConsultasEmCache(): AgendaConsulta[] {
-    return this.queryCache.getSnapshot<AgendaConsulta[]>(this.cacheKeyConsultas) ?? [];
+    return this.queryCache.getSnapshot<AgendaConsulta[]>(this.ultimaChaveConsultas) ?? [];
   }
 
   criarConsulta(
@@ -207,7 +240,7 @@ export class AgendaService {
           consulta: this.mapearConsultaApi(resposta.consulta),
         })),
         tap(() => {
-          this.queryCache.invalidate(this.cacheKeyConsultas);
+          this.invalidarCacheConsultas();
         }),
         catchError((error) =>
           throwError(
@@ -263,8 +296,7 @@ export class AgendaService {
           consulta: this.mapearConsultaApi(resposta.consulta),
         })),
         tap(() => {
-          // Invalida cache para forçar refresh na próxima vez
-          this.queryCache.invalidate(this.cacheKeyConsultas);
+          this.invalidarCacheConsultas();
         }),
         catchError((error) =>
           throwError(
@@ -323,8 +355,7 @@ export class AgendaService {
       }>(`${this.apiConsultasUrl}?id=${encodeURIComponent(consultaId)}`, { withCredentials: true })
       .pipe(
         tap(() => {
-          // Invalida cache para forçar refresh na próxima vez
-          this.queryCache.invalidate(this.cacheKeyConsultas);
+          this.invalidarCacheConsultas();
         }),
         catchError((error) =>
           throwError(
