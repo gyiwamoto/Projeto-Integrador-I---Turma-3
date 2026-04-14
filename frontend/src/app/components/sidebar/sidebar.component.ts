@@ -35,12 +35,6 @@ export class SidebarComponent {
     },
     { label: 'Consultas', route: '/dashboard/consultas', icon: 'event_note', adminOnly: false },
     { label: 'Pacientes', route: '/dashboard/pacientes', icon: 'groups', adminOnly: false },
-    {
-      label: 'Tratamentos',
-      route: '/dashboard/tratamentos',
-      icon: 'medical_services',
-      adminOnly: false,
-    },
     { label: 'Convenios', route: '/dashboard/convenios', icon: 'work_history', adminOnly: false },
     { label: 'Minha Conta', route: '/dashboard/minha-conta', icon: 'person', adminOnly: false },
     {

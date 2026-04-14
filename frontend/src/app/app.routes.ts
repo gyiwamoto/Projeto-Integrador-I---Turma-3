@@ -9,7 +9,6 @@ import { UsuariosPage } from './pages/usuarios/usuarios.component';
 import { MainLayoutComponent } from './layout/main-layout.component';
 import { ConsultasComponent } from './pages/consultas/consultas.component';
 import { ConveniosPage } from './pages/convenios/convenios.component';
-import { TratamentosPage } from './pages/tratamentos/tratamentos.component';
 import { AtendimentoComponent } from './pages/atendimento/atendimento.component';
 
 export const routes: Routes = [
@@ -26,7 +25,6 @@ export const routes: Routes = [
       { path: 'atendimento', component: AtendimentoComponent },
       { path: 'agendar-consulta', component: AgendaComponent },
       { path: 'pacientes', component: PacientesComponent },
-      { path: 'tratamentos', component: TratamentosPage },
       { path: 'convenios', component: ConveniosPage },
       { path: 'minha-conta', component: MinhaContaPage },
       { path: 'usuarios', component: UsuariosPage, canActivate: [adminGuard] },

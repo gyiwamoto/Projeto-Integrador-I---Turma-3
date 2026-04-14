@@ -223,11 +223,6 @@ describe('SidebarComponent', () => {
       expect(item?.route).toBe('/dashboard/pacientes');
     });
 
-    it('tem rota para tratamentos', () => {
-      const item = component.menuItems.find((i) => i.label === 'Tratamentos');
-      expect(item?.route).toBe('/dashboard/tratamentos');
-    });
-
     it('tem rota para convenios', () => {
       const item = component.menuItems.find((i) => i.label === 'Convenios');
       expect(item?.route).toBe('/dashboard/convenios');

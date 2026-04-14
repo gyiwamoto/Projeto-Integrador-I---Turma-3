@@ -5,8 +5,9 @@ Esta pasta guarda as migrations SQL versionadas do projeto.
 ## Status atual
 
 - Versao: `1.0.0`
-- Migrations disponiveis: `001` ate `009`
-- Estrutura principal do dominio clinico ja criada (usuarios, pacientes, convenios, tratamentos, consultas, procedimentos e logs).
+- Migrations disponiveis: `001` ate `013`
+- Estrutura principal do dominio clinico ativa para usuarios, pacientes, convenios, consultas, procedimentos e logs.
+- A tabela `tratamentos` foi removida na migration `011` por decisao de economia de requisicoes, ja que esses dados mudam com baixa frequencia e passaram para catalogo fixo.
 - Proximas etapas incluem ajustes de performance, mais seeds para homologacao e evolucoes para relatorios gerenciais.
 
 ## Estrutura atual
@@ -23,6 +24,10 @@ database/
 |  |- 007_tabela_procedimentos_realizados.sql
 |  |- 008_tabela_logs_acessos.sql
 |  |- 009_codigo_paciente_autoincremento.sql
+|  |- 010_adicionar_cnpj_convenios.sql
+|  |- 011_remover_tratamentos_e_ajustar_procedimentos.sql
+|  |- 012_adicionar_duracao_e_procedimentos_consultas.sql
+|  |- 013_datas_em_horario_brasil.sql
 |- scripts/
 |  |- db-migrate-all.mjs
 |  |- db-run-sql.mjs
@@ -128,14 +133,9 @@ Tabela de convenios aceitos pela clinica.
 
 ### tratamentos
 
-Tabela de tratamentos/procedimentos ofertados.
+Tabela removida na migration `011_remover_tratamentos_e_ajustar_procedimentos.sql`.
 
-- id (PK)
-- nome
-- descricao
-- valor
-- ativo
-- criado_em
+Motivo: reduzir requisicoes para dados de baixa variacao, migrando para catalogo fixo de procedimentos.
 
 ### consultas
 
@@ -149,6 +149,8 @@ Registra os atendimentos agendados e realizados.
 - convenio_cnpj (FK convenios, opcional)
 - numero_carteirinha
 - observacoes
+- procedimentos_agendados (catalogo fixo)
+- duracao_estimada_min
 - criado_em
 
 ### procedimentos_realizados
@@ -157,7 +159,7 @@ Relaciona os procedimentos executados em uma consulta.
 
 - id (PK)
 - consulta_id (FK consultas)
-- tratamento_id (FK tratamentos)
+- tratamento_id (codigo de procedimento em catalogo fixo)
 - dente
 - face
 - data_procedimento
@@ -193,4 +195,3 @@ Obs:
 - usuarios -> consultas
 - usuarios -> logs_acessos
 - consultas -> procedimentos_realizados
-- tratamentos -> procedimentos_realizados

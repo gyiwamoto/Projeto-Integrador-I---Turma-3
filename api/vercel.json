@@ -19,10 +19,6 @@
       "use": "@vercel/node"
     },
     {
-      "src": "tratamentos/index.ts",
-      "use": "@vercel/node"
-    },
-    {
       "src": "procedimentos-realizados/index.ts",
       "use": "@vercel/node"
     },

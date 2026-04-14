@@ -18,9 +18,6 @@
     "api/consultas/index.ts": {
       "runtime": "@vercel/node@5.1.4"
     },
-    "api/tratamentos/index.ts": {
-      "runtime": "@vercel/node@5.1.4"
-    },
     "api/procedimentos-realizados/index.ts": {
       "runtime": "@vercel/node@5.1.4"
     }
