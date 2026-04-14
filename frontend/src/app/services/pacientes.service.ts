@@ -1,10 +1,10 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { PacienteItem, SalvarPacientePayload } from '../interfaces/Paciente';
 import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
-import { QueryCacheService } from './query-cache.service';
+import { CacheStoreService } from './cache-store.service';
 
 interface PacienteApiItem {
   id: string;
@@ -34,32 +34,73 @@ export interface ExcluirPacienteResponse {
   mensagem: string;
 }
 
+interface ListarPacientesOpcoes {
+  forcarAtualizacao?: boolean;
+  intervalo?: {
+    dataInicio?: string;
+    dataFim?: string;
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class PacientesService {
   private readonly apiUrl = '/api/pacientes';
-  private readonly cacheKeyListagem = `${this.apiUrl}:list`;
+  private readonly cacheKeyListagem = 'patients:list';
+  private readonly ttlPacientesMs = 3 * 60 * 1000;
 
   constructor(
     private readonly http: HttpClient,
-    private readonly queryCache: QueryCacheService,
+    private readonly queryCache: CacheStoreService,
   ) {}
 
-  listarPacientes(forcarAtualizacao = false): Observable<ListarPacientesResponse> {
+  private chavePaciente(id: string): string {
+    return `patient:${id}`;
+  }
+
+  private chaveListagem(intervalo?: { dataInicio?: string; dataFim?: string }): string {
+    if (!intervalo?.dataInicio && !intervalo?.dataFim) {
+      return this.cacheKeyListagem;
+    }
+
+    return `${this.cacheKeyListagem}:inicio=${intervalo?.dataInicio ?? ''}:fim=${intervalo?.dataFim ?? ''}`;
+  }
+
+  listarPacientes(opcoes: ListarPacientesOpcoes = {}): Observable<ListarPacientesResponse> {
+    const forcarAtualizacao = Boolean(opcoes.forcarAtualizacao);
+    let params = new HttpParams();
+
+    if (opcoes.intervalo?.dataInicio) {
+      params = params.set('data_inicio', opcoes.intervalo.dataInicio);
+    }
+
+    if (opcoes.intervalo?.dataFim) {
+      params = params.set('data_fim', opcoes.intervalo.dataFim);
+    }
+
     return this.queryCache.getOrSet(
-      this.cacheKeyListagem,
+      this.chaveListagem(opcoes.intervalo),
       () =>
         this.http
           .get<{
             total: number;
             pacientes: PacienteApiItem[];
-          }>(this.apiUrl, { withCredentials: true })
+          }>(this.apiUrl, { withCredentials: true, params })
           .pipe(
             map((resposta) => ({
               total: resposta.total,
               pacientes: (resposta.pacientes ?? []).map((item) => this.mapearPaciente(item)),
             })),
+            tap((resposta) => {
+              for (const paciente of resposta.pacientes) {
+                this.queryCache.setSnapshot<PacienteItem>(
+                  this.chavePaciente(paciente.id),
+                  paciente,
+                  this.ttlPacientesMs,
+                );
+              }
+            }),
             catchError((error) =>
               throwError(
                 () =>
@@ -72,7 +113,7 @@ export class PacientesService {
               ),
             ),
           ),
-      undefined,
+      this.ttlPacientesMs,
       forcarAtualizacao,
     );
   }
@@ -98,6 +139,11 @@ export class PacientesService {
           paciente: this.mapearPaciente(resposta.paciente),
         })),
         tap((resposta) => {
+          this.queryCache.setSnapshot<PacienteItem>(
+            this.chavePaciente(resposta.paciente.id),
+            resposta.paciente,
+            this.ttlPacientesMs,
+          );
           this.queryCache.updateSnapshot<ListarPacientesResponse>(
             this.cacheKeyListagem,
             (atual) => {
@@ -144,6 +190,11 @@ export class PacientesService {
           paciente: this.mapearPaciente(resposta.paciente),
         })),
         tap((resposta) => {
+          this.queryCache.setSnapshot<PacienteItem>(
+            this.chavePaciente(resposta.paciente.id),
+            resposta.paciente,
+            this.ttlPacientesMs,
+          );
           this.queryCache.updateSnapshot<ListarPacientesResponse>(
             this.cacheKeyListagem,
             (atual) => {
@@ -175,6 +226,7 @@ export class PacientesService {
       })
       .pipe(
         tap(() => {
+          this.queryCache.invalidate(this.chavePaciente(pacienteId));
           this.queryCache.updateSnapshot<ListarPacientesResponse>(
             this.cacheKeyListagem,
             (atual) => {

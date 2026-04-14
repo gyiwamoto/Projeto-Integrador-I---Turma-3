@@ -4,7 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { ConvenioItem, SalvarConvenioPayload } from '../interfaces/Convenio';
 import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
-import { QueryCacheService } from './query-cache.service';
+import { CacheStoreService } from './cache-store.service';
 
 export interface ListarConveniosResponse {
   total: number;
@@ -25,27 +25,35 @@ export interface ExcluirConvenioResponse {
 })
 export class ConveniosService {
   private readonly apiUrl = '/api/convenios';
-  private readonly cacheKeyListagem = `${this.apiUrl}:list`;
+  private readonly cacheKeyListagem = 'convenios';
+  private readonly ttlConveniosMs = 10 * 60 * 1000;
 
   constructor(
     private readonly http: HttpClient,
-    private readonly queryCache: QueryCacheService,
+    private readonly queryCache: CacheStoreService,
   ) {}
 
-  listarConvenios(): Observable<ListarConveniosResponse> {
-    return this.queryCache.getOrSet(this.cacheKeyListagem, () =>
-      this.http
-        .get<ListarConveniosResponse>(this.apiUrl, { withCredentials: true })
-        .pipe(
-          catchError((error) =>
-            throwError(
-              () =>
-                new Error(
-                  extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os convenios.'),
-                ),
+  listarConvenios(forcarAtualizacao = false): Observable<ListarConveniosResponse> {
+    return this.queryCache.getOrSet(
+      this.cacheKeyListagem,
+      () =>
+        this.http
+          .get<ListarConveniosResponse>(this.apiUrl, { withCredentials: true })
+          .pipe(
+            catchError((error) =>
+              throwError(
+                () =>
+                  new Error(
+                    extrairMensagemErroApi(
+                      error?.error,
+                      'Nao foi possivel processar os convenios.',
+                    ),
+                  ),
+              ),
             ),
           ),
-        ),
+      this.ttlConveniosMs,
+      forcarAtualizacao,
     );
   }
 

@@ -7,7 +7,7 @@ import {
   SalvarProcedimentoRealizadoPayload,
 } from '../interfaces/ProcedimentoRealizado';
 import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
-import { QueryCacheService } from './query-cache.service';
+import { CacheStoreService } from './cache-store.service';
 
 interface ProcedimentoRealizadoApiItem {
   id: string;
@@ -44,12 +44,17 @@ export interface AtualizarProcedimentoRealizadoPayload {
 })
 export class ProcedimentosRealizadosService {
   private readonly apiUrl = '/api/procedimentos-realizados';
-  private readonly cacheKeyListagem = `${this.apiUrl}:list`;
+  private readonly cacheKeyListagem = 'procedures:list';
+  private readonly ttlProcedimentosMs = 2 * 60 * 1000;
 
   constructor(
     private readonly http: HttpClient,
-    private readonly queryCache: QueryCacheService,
+    private readonly queryCache: CacheStoreService,
   ) {}
+
+  private chaveConsulta(consultaId: string): string {
+    return `procedures:consulta:${consultaId}`;
+  }
 
   listarProcedimentosRealizados(
     forcarAtualizacao = false,
@@ -72,36 +77,41 @@ export class ProcedimentosRealizadosService {
               ),
             ),
           ),
-      undefined,
+      this.ttlProcedimentosMs,
       forcarAtualizacao,
     );
   }
 
   listarPorConsulta(consultaId: string): Observable<ProcedimentoRealizadoItem[]> {
-    const cacheKey = `${this.apiUrl}:consulta:${consultaId}`;
+    const cacheKey = this.chaveConsulta(consultaId);
 
-    return this.queryCache.getOrSet(cacheKey, () =>
-      this.http
-        .get<ListarProcedimentosRealizadosResponse>(
-          `${this.apiUrl}?consulta_id=${encodeURIComponent(consultaId)}`,
-          { withCredentials: true },
-        )
-        .pipe(
-          map((resposta) =>
-            (resposta.procedimentos_realizados ?? []).map((item) => this.mapearProcedimento(item)),
-          ),
-          catchError((error) =>
-            throwError(
-              () =>
-                new Error(
-                  extrairMensagemErroApi(
-                    error?.error,
-                    'Nao foi possivel carregar os procedimentos realizados.',
+    return this.queryCache.getOrSet(
+      cacheKey,
+      () =>
+        this.http
+          .get<ListarProcedimentosRealizadosResponse>(
+            `${this.apiUrl}?consulta_id=${encodeURIComponent(consultaId)}`,
+            { withCredentials: true },
+          )
+          .pipe(
+            map((resposta) =>
+              (resposta.procedimentos_realizados ?? []).map((item) =>
+                this.mapearProcedimento(item),
+              ),
+            ),
+            catchError((error) =>
+              throwError(
+                () =>
+                  new Error(
+                    extrairMensagemErroApi(
+                      error?.error,
+                      'Nao foi possivel carregar os procedimentos realizados.',
+                    ),
                   ),
-                ),
+              ),
             ),
           ),
-        ),
+      this.ttlProcedimentosMs,
     );
   }
 
@@ -122,7 +132,29 @@ export class ProcedimentosRealizadosService {
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidateByPrefix(this.apiUrl)),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarProcedimentosRealizadosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const procedimentosAtuais = atual?.procedimentos_realizados ?? [];
+              const item = resposta.procedimento;
+              return {
+                total: (atual?.total ?? procedimentosAtuais.length) + 1,
+                procedimentos_realizados: [
+                  item,
+                  ...procedimentosAtuais.filter((procedimento) => procedimento.id !== item.id),
+                ],
+              };
+            },
+          );
+
+          const chaveConsulta = this.chaveConsulta(resposta.procedimento.consulta_id);
+          const mapeado = this.mapearProcedimento(resposta.procedimento);
+          this.queryCache.updateSnapshot<ProcedimentoRealizadoItem[]>(chaveConsulta, (atual) => [
+            mapeado,
+            ...(atual ?? []).filter((procedimento) => procedimento.id !== mapeado.id),
+          ]);
+        }),
         map((resposta) => this.mapearProcedimento(resposta.procedimento)),
         catchError((error) =>
           throwError(
@@ -141,7 +173,21 @@ export class ProcedimentosRealizadosService {
         mensagem: string;
       }>(`${this.apiUrl}?id=${encodeURIComponent(procedimentoId)}`, { withCredentials: true })
       .pipe(
-        tap(() => this.queryCache.invalidateByPrefix(this.apiUrl)),
+        tap(() => {
+          this.queryCache.updateSnapshot<ListarProcedimentosRealizadosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const procedimentosAtuais = atual?.procedimentos_realizados ?? [];
+              const procedimentos = procedimentosAtuais.filter(
+                (item) => item.id !== procedimentoId,
+              );
+              return {
+                total: procedimentos.length,
+                procedimentos_realizados: procedimentos,
+              };
+            },
+          );
+        }),
         catchError((error) =>
           throwError(
             () =>
@@ -170,7 +216,27 @@ export class ProcedimentosRealizadosService {
         { withCredentials: true },
       )
       .pipe(
-        tap(() => this.queryCache.invalidateByPrefix(this.apiUrl)),
+        tap((resposta) => {
+          this.queryCache.updateSnapshot<ListarProcedimentosRealizadosResponse>(
+            this.cacheKeyListagem,
+            (atual) => {
+              const procedimentosAtuais = atual?.procedimentos_realizados ?? [];
+              return {
+                total: atual?.total ?? procedimentosAtuais.length,
+                procedimentos_realizados: procedimentosAtuais.map((item) =>
+                  item.id === resposta.procedimento.id ? resposta.procedimento : item,
+                ),
+              };
+            },
+          );
+
+          const chaveConsulta = this.chaveConsulta(resposta.procedimento.consulta_id);
+          const mapeado = this.mapearProcedimento(resposta.procedimento);
+          this.queryCache.updateSnapshot<ProcedimentoRealizadoItem[]>(chaveConsulta, (atual) => {
+            const procedimentosAtuais = atual ?? [];
+            return procedimentosAtuais.map((item) => (item.id === mapeado.id ? mapeado : item));
+          });
+        }),
         map((resposta) => this.mapearProcedimento(resposta.procedimento)),
         catchError((error) =>
           throwError(

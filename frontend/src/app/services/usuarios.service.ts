@@ -10,7 +10,7 @@ import {
   UsuarioListaItem,
 } from '../interfaces/Usuario';
 import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
-import { QueryCacheService } from './query-cache.service';
+import { CacheStoreService } from './cache-store.service';
 
 export interface ListarUsuariosResponse {
   total: number;
@@ -46,7 +46,7 @@ export class UsuariosService {
 
   constructor(
     private readonly http: HttpClient,
-    private readonly queryCache: QueryCacheService,
+    private readonly queryCache: CacheStoreService,
   ) {}
 
   listarUsuarios(forcarAtualizacao = false): Observable<ListarUsuariosResponse> {

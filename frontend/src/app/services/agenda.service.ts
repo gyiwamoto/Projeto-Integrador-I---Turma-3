@@ -1,15 +1,10 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
-import {
-  AgendaConsulta,
-  AgendaPaciente,
-  AgendaStatus,
-  NovoAgendamentoInput,
-} from '../interfaces/Agenda';
+import { AgendaConsulta, AgendaPaciente, AgendaStatus } from '../interfaces/Agenda';
 import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
-import { QueryCacheService } from './query-cache.service';
+import { CacheStoreService } from './cache-store.service';
 
 interface ConsultasApiResponse {
   total: number;
@@ -34,6 +29,8 @@ interface ConsultaApiItem {
   convenio_nome: string | null;
   numero_carteirinha: string | null;
   observacoes: string | null;
+  procedimentos_agendados: string[] | null;
+  duracao_estimada_min: number | null;
   atualizado_em: string;
   criado_em: string;
 }
@@ -58,6 +55,25 @@ export interface AtualizarConsultaPayload {
   observacoes?: string;
   numeroCarteirinha?: string;
   convenioId?: string;
+  procedimentosAgendados?: string[];
+  duracaoEstimadaMin?: number;
+}
+
+export interface CriarConsultaPayload {
+  pacienteId: string;
+  dataConsulta: string;
+  status?: AgendaStatus;
+  observacoes?: string;
+  numeroCarteirinha?: string;
+  convenioId?: string;
+  usuarioId?: string;
+  procedimentosAgendados?: string[];
+  duracaoEstimadaMin?: number;
+}
+
+export interface IntervaloConsulta {
+  dataInicio?: string;
+  dataFim?: string;
 }
 
 @Injectable({
@@ -66,25 +82,54 @@ export interface AtualizarConsultaPayload {
 export class AgendaService {
   private readonly apiConsultasUrl = '/api/consultas';
   private readonly apiPacientesUrl = '/api/pacientes';
-  private readonly cacheKeyConsultas = `${this.apiConsultasUrl}:list:geral`;
-  private readonly cacheKeyConsultasAtendimento = `${this.apiConsultasUrl}:list:atendimento`;
-  private readonly cacheKeyPacientes = `${this.apiPacientesUrl}:list`;
-
-  private readonly consultasStore = signal<AgendaConsulta[]>([]);
-
-  readonly consultas = this.consultasStore.asReadonly();
+  private readonly cacheKeyConsultas = 'consultas:list';
+  private readonly cacheKeyPacientes = 'pacientes:list';
+  private readonly ttlConsultasMs = 45 * 1000;
+  private readonly ttlPacientesMs = 3 * 60 * 1000;
 
   constructor(
     private readonly http: HttpClient,
-    private readonly queryCache: QueryCacheService,
+    private readonly queryCache: CacheStoreService,
   ) {}
+
+  private mapearConsultaApi(consulta: ConsultaApiItem): AgendaConsulta {
+    return {
+      id: consulta.id,
+      pacienteId: consulta.paciente_id,
+      usuarioId: consulta.usuario_id,
+      pacienteNome: consulta.paciente_nome ?? 'Paciente sem nome',
+      codigoPaciente: consulta.codigo_paciente ?? undefined,
+      profissionalNome: consulta.usuario_nome ?? 'Profissional nao informado',
+      status: consulta.status,
+      dataConsulta: consulta.data_consulta,
+      convenioId: consulta.convenio_cnpj ?? undefined,
+      convenioNome: consulta.convenio_nome ?? undefined,
+      numeroCarteirinha: consulta.numero_carteirinha ?? undefined,
+      observacoes: consulta.observacoes ?? undefined,
+      procedimentosAgendados: consulta.procedimentos_agendados ?? undefined,
+      duracaoEstimadaMin: consulta.duracao_estimada_min ?? undefined,
+      atualizadoEm: consulta.atualizado_em,
+    };
+  }
 
   listarConsultas(
     forcarAtualizacao = false,
     escopo: 'geral' | 'atendimento' = 'geral',
+    intervalo?: IntervaloConsulta,
   ): Observable<AgendaConsulta[]> {
-    const chaveCache =
-      escopo === 'atendimento' ? this.cacheKeyConsultasAtendimento : this.cacheKeyConsultas;
+    // Chave simples de cache
+    const chaveCache = this.cacheKeyConsultas;
+
+    let params = new HttpParams();
+    if (escopo === 'atendimento') {
+      params = params.set('escopo', 'atendimento');
+    }
+    if (intervalo?.dataInicio) {
+      params = params.set('data_inicio', intervalo.dataInicio);
+    }
+    if (intervalo?.dataFim) {
+      params = params.set('data_fim', intervalo.dataFim);
+    }
 
     return this.queryCache.getOrSet(
       chaveCache,
@@ -92,26 +137,12 @@ export class AgendaService {
         this.http
           .get<ConsultasApiResponse>(this.apiConsultasUrl, {
             withCredentials: true,
-            params: escopo === 'atendimento' ? { escopo: 'atendimento' } : undefined,
+            params,
           })
           .pipe(
             map((resposta) =>
-              (resposta.consultas ?? []).map((consulta) => ({
-                id: consulta.id,
-                pacienteId: consulta.paciente_id,
-                pacienteNome: consulta.paciente_nome ?? 'Paciente sem nome',
-                codigoPaciente: consulta.codigo_paciente ?? undefined,
-                profissionalNome: consulta.usuario_nome ?? 'Profissional nao informado',
-                status: consulta.status,
-                dataConsulta: consulta.data_consulta,
-                convenioId: consulta.convenio_cnpj ?? undefined,
-                convenioNome: consulta.convenio_nome ?? undefined,
-                numeroCarteirinha: consulta.numero_carteirinha ?? undefined,
-                observacoes: consulta.observacoes ?? undefined,
-                atualizadoEm: consulta.atualizado_em,
-              })),
+              (resposta.consultas ?? []).map((consulta) => this.mapearConsultaApi(consulta)),
             ),
-            tap((consultas) => this.consultasStore.set(consultas)),
             catchError((error) =>
               throwError(
                 () =>
@@ -124,22 +155,78 @@ export class AgendaService {
               ),
             ),
           ),
-      undefined,
+      this.ttlConsultasMs,
       forcarAtualizacao,
     );
   }
 
-  obterConsultasEmCache(escopo: 'geral' | 'atendimento' = 'geral'): AgendaConsulta[] {
-    const chaveCache =
-      escopo === 'atendimento' ? this.cacheKeyConsultasAtendimento : this.cacheKeyConsultas;
-    return this.queryCache.getSnapshot<AgendaConsulta[]>(chaveCache) ?? [];
+  /**
+   * Retorna consultas em cache (mesmo que expiradas)
+   */
+  obterConsultasEmCache(): AgendaConsulta[] {
+    return this.queryCache.getSnapshot<AgendaConsulta[]>(this.cacheKeyConsultas) ?? [];
+  }
+
+  criarConsulta(
+    payload: CriarConsultaPayload,
+  ): Observable<{ mensagem: string; consulta: AgendaConsulta }> {
+    const body: Record<string, unknown> = {
+      paciente_id: payload.pacienteId,
+      data_consulta: payload.dataConsulta,
+      status: payload.status ?? 'agendado',
+    };
+
+    if (payload.observacoes !== undefined) {
+      body['observacoes'] = payload.observacoes;
+    }
+
+    if (payload.numeroCarteirinha?.trim()) {
+      body['numero_carteirinha'] = payload.numeroCarteirinha.trim();
+    }
+
+    if (payload.convenioId?.trim()) {
+      body['convenio_cnpj'] = payload.convenioId.trim();
+    }
+
+    if (payload.usuarioId?.trim()) {
+      body['usuario_id'] = payload.usuarioId.trim();
+    }
+
+    if (payload.procedimentosAgendados?.length) {
+      body['procedimentos_agendados'] = payload.procedimentosAgendados;
+    }
+
+    if (typeof payload.duracaoEstimadaMin === 'number' && payload.duracaoEstimadaMin > 0) {
+      body['duracao_estimada_min'] = payload.duracaoEstimadaMin;
+    }
+
+    return this.http
+      .post<{ mensagem: string; consulta: ConsultaApiItem }>(this.apiConsultasUrl, body, {
+        withCredentials: true,
+      })
+      .pipe(
+        map((resposta) => ({
+          mensagem: resposta.mensagem,
+          consulta: this.mapearConsultaApi(resposta.consulta),
+        })),
+        tap(() => {
+          // Invalida cache para forçar refresh na próxima vez
+          this.queryCache.invalidate(this.cacheKeyConsultas);
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(extrairMensagemErroApi(error?.error, 'Nao foi possivel criar a consulta.')),
+          ),
+        ),
+      );
   }
 
   atualizarConsulta(
     consultaId: string,
     payload: AtualizarConsultaPayload,
-  ): Observable<{ mensagem: string }> {
-    const body: Record<string, string> = {
+  ): Observable<{ mensagem: string; consulta: AgendaConsulta }> {
+    const body: Record<string, unknown> = {
       status: payload.status,
     };
 
@@ -159,15 +246,29 @@ export class AgendaService {
       body['convenio_cnpj'] = payload.convenioId.trim();
     }
 
+    if (payload.procedimentosAgendados?.length) {
+      body['procedimentos_agendados'] = payload.procedimentosAgendados;
+    }
+
+    if (typeof payload.duracaoEstimadaMin === 'number' && payload.duracaoEstimadaMin > 0) {
+      body['duracao_estimada_min'] = payload.duracaoEstimadaMin;
+    }
+
     return this.http
       .put<{
         mensagem: string;
+        consulta: ConsultaApiItem;
       }>(`${this.apiConsultasUrl}?id=${encodeURIComponent(consultaId)}`, body, {
         withCredentials: true,
       })
       .pipe(
+        map((resposta) => ({
+          mensagem: resposta.mensagem,
+          consulta: this.mapearConsultaApi(resposta.consulta),
+        })),
         tap(() => {
-          this.atualizarConsultaNosCaches(consultaId, payload);
+          // Invalida cache para forçar refresh na próxima vez
+          this.queryCache.invalidate(this.cacheKeyConsultas);
         }),
         catchError((error) =>
           throwError(
@@ -183,7 +284,7 @@ export class AgendaService {
   atualizarStatusConsulta(
     consultaId: string,
     status: AgendaStatus,
-  ): Observable<{ mensagem: string }> {
+  ): Observable<{ mensagem: string; consulta: AgendaConsulta }> {
     return this.atualizarConsulta(consultaId, { status });
   }
 
@@ -214,7 +315,7 @@ export class AgendaService {
             ),
           ),
         ),
-      undefined,
+      this.ttlPacientesMs,
       forcarAtualizacao,
     );
   }
@@ -226,7 +327,8 @@ export class AgendaService {
       }>(`${this.apiConsultasUrl}?id=${encodeURIComponent(consultaId)}`, { withCredentials: true })
       .pipe(
         tap(() => {
-          this.removerConsultaDosCaches(consultaId);
+          // Invalida cache para forçar refresh na próxima vez
+          this.queryCache.invalidate(this.cacheKeyConsultas);
         }),
         catchError((error) =>
           throwError(
@@ -237,77 +339,5 @@ export class AgendaService {
           ),
         ),
       );
-  }
-
-  registrarAgendamentoLocal(input: NovoAgendamentoInput): AgendaConsulta {
-    const novoId = this.proximoIdConsulta();
-    const novaConsulta: AgendaConsulta = {
-      id: novoId,
-      pacienteId: input.pacienteId,
-      pacienteNome: input.pacienteNome,
-      codigoPaciente: input.codigoPaciente,
-      profissionalNome: input.profissionalNome,
-      status: input.status ?? 'agendado',
-      dataConsulta: input.dataConsulta,
-    };
-
-    this.consultasStore.update((consultasAtuais) => [novaConsulta, ...consultasAtuais]);
-    return novaConsulta;
-  }
-
-  private proximoIdConsulta(): string {
-    return `local-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  }
-
-  private atualizarConsultaNosCaches(consultaId: string, payload: AtualizarConsultaPayload): void {
-    const atualizarLista = (consultas: AgendaConsulta[] | undefined): AgendaConsulta[] => {
-      const listaAtual = consultas ?? [];
-      const listaAtualizada = listaAtual.map((consulta) => {
-        if (consulta.id !== consultaId) {
-          return consulta;
-        }
-
-        return {
-          ...consulta,
-          status: payload.status,
-          dataConsulta: payload.dataConsulta?.trim()
-            ? payload.dataConsulta.trim()
-            : consulta.dataConsulta,
-          observacoes:
-            payload.observacoes !== undefined ? payload.observacoes : consulta.observacoes,
-          numeroCarteirinha:
-            payload.numeroCarteirinha !== undefined
-              ? payload.numeroCarteirinha
-              : consulta.numeroCarteirinha,
-          convenioId: payload.convenioId !== undefined ? payload.convenioId : consulta.convenioId,
-          atualizadoEm: new Date().toISOString(),
-        };
-      });
-
-      this.consultasStore.set(listaAtualizada);
-      return listaAtualizada;
-    };
-
-    this.queryCache.updateSnapshot<AgendaConsulta[]>(this.cacheKeyConsultas, (atual) =>
-      atualizarLista(atual),
-    );
-    this.queryCache.updateSnapshot<AgendaConsulta[]>(this.cacheKeyConsultasAtendimento, (atual) =>
-      atualizarLista(atual),
-    );
-  }
-
-  private removerConsultaDosCaches(consultaId: string): void {
-    const removerDaLista = (consultas: AgendaConsulta[] | undefined): AgendaConsulta[] => {
-      const listaAtualizada = (consultas ?? []).filter((consulta) => consulta.id !== consultaId);
-      this.consultasStore.set(listaAtualizada);
-      return listaAtualizada;
-    };
-
-    this.queryCache.updateSnapshot<AgendaConsulta[]>(this.cacheKeyConsultas, (atual) =>
-      removerDaLista(atual),
-    );
-    this.queryCache.updateSnapshot<AgendaConsulta[]>(this.cacheKeyConsultasAtendimento, (atual) =>
-      removerDaLista(atual),
-    );
   }
 }
