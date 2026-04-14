@@ -3,6 +3,7 @@ export type AgendaStatus = 'agendado' | 'realizado' | 'cancelado';
 export interface AgendaConsulta {
   id: string;
   pacienteId: string;
+  usuarioId: string;
   pacienteNome: string;
   codigoPaciente?: string;
   profissionalNome: string;
@@ -12,6 +13,8 @@ export interface AgendaConsulta {
   convenioNome?: string;
   numeroCarteirinha?: string;
   observacoes?: string;
+  procedimentosAgendados?: string[];
+  duracaoEstimadaMin?: number;
   atualizadoEm?: string;
 }
 
@@ -22,13 +25,4 @@ export interface AgendaPaciente {
   telefone: string;
   email: string;
   numeroCarteirinha: string;
-}
-
-export interface NovoAgendamentoInput {
-  pacienteId: string;
-  codigoPaciente?: string;
-  pacienteNome: string;
-  profissionalNome: string;
-  dataConsulta: string;
-  status?: AgendaStatus;
 }
