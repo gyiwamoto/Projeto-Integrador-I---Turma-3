@@ -1,7 +1,9 @@
 import type { VercelRequest, VercelResponse } from './http.types';
 import { AuthError, autenticarRequisicao, verificarPermissaoDeletar } from '../api/_lib/auth';
 import pool from '../api/_lib/db';
+import { normalizarDataIso, obterTimezoneNegocio } from '../api/_lib/date-time';
 import { registrarLogFalha, registrarLogSucesso } from './logsAcessos.service';
+import { extrairIdDaUrlString } from './request-utils.service';
 
 interface PacienteListagem {
   id: string;
@@ -47,16 +49,6 @@ interface ErroBancoDados {
   message?: string;
 }
 
-function extrairIdDaUrl(req: VercelRequest): string {
-  const { id } = req.query;
-
-  if (!id || Array.isArray(id)) {
-    throw new AuthError('ID invalido.', 400);
-  }
-
-  return id;
-}
-
 export async function listarPacientes(req: VercelRequest, res: VercelResponse) {
   try {
     await autenticarRequisicao(req);
@@ -66,6 +58,48 @@ export async function listarPacientes(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(401).json({ erro: 'Requer autenticacao.' });
+  }
+
+  const dataInicioRaw = typeof req.query.data_inicio === 'string' ? req.query.data_inicio.trim() : '';
+  const dataFimRaw = typeof req.query.data_fim === 'string' ? req.query.data_fim.trim() : '';
+  const dataInicio = dataInicioRaw ? normalizarDataIso(dataInicioRaw) : null;
+  const dataFim = dataFimRaw ? normalizarDataIso(dataFimRaw) : null;
+
+  if (dataInicioRaw && !dataInicio) {
+    return res.status(400).json({ erro: 'data_inicio invalida. Use formato DD-MM-YYYY.' });
+  }
+
+  if (dataFimRaw && !dataFim) {
+    return res.status(400).json({ erro: 'data_fim invalida. Use formato DD-MM-YYYY.' });
+  }
+
+  const timezoneNegocio = obterTimezoneNegocio();
+  const valores: string[] = [];
+  const criterios: string[] = [];
+
+  if (dataInicio || dataFim) {
+    const filtrosConsultas: string[] = [];
+
+    if (dataInicio) {
+      filtrosConsultas.push(
+        `(c.data_consulta AT TIME ZONE $${valores.length + 1})::date >= $${valores.length + 2}::date`,
+      );
+      valores.push(timezoneNegocio, dataInicio);
+    }
+
+    if (dataFim) {
+      filtrosConsultas.push(
+        `(c.data_consulta AT TIME ZONE $${valores.length + 1})::date <= $${valores.length + 2}::date`,
+      );
+      valores.push(timezoneNegocio, dataFim);
+    }
+
+    criterios.push(`EXISTS (
+      SELECT 1
+        FROM consultas c
+       WHERE c.paciente_id = p.id
+         AND ${filtrosConsultas.join(' AND ')}
+    )`);
   }
 
   const resultado = await pool.query<PacienteListagem>(
@@ -81,9 +115,13 @@ export async function listarPacientes(req: VercelRequest, res: VercelResponse) {
             p.numero_carteirinha,
             p.criado_em
        FROM pacientes p
-         LEFT JOIN convenios c ON c.cnpj = p.convenio_cnpj
+       LEFT JOIN convenios c ON c.cnpj = p.convenio_cnpj${criterios.length ? `
+      WHERE ${criterios.join(' AND ')}` : ''}
       ORDER BY p.criado_em DESC`,
+    valores,
   );
+
+  res.setHeader('Cache-Control', 'public, s-maxage=180, stale-while-revalidate=300');
 
   return res.status(200).json({
     total: resultado.rowCount ?? 0,
@@ -308,7 +346,7 @@ export async function criarPaciente(req: VercelRequest, res: VercelResponse) {
 export async function editarPaciente(req: VercelRequest, res: VercelResponse) {
   let id: string;
   try {
-    id = extrairIdDaUrl(req);
+    id = extrairIdDaUrlString(req);
     await autenticarRequisicao(req);
   } catch (error) {
     if (error instanceof AuthError) {
@@ -413,7 +451,7 @@ export async function editarPaciente(req: VercelRequest, res: VercelResponse) {
 export async function deletarPaciente(req: VercelRequest, res: VercelResponse) {
   let id: string;
   try {
-    id = extrairIdDaUrl(req);
+    id = extrairIdDaUrlString(req);
     const usuarioLogado = await autenticarRequisicao(req);
     verificarPermissaoDeletar(usuarioLogado);
   } catch (error) {

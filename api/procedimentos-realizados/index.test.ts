@@ -17,12 +17,12 @@ describe('/api/procedimentos-realizados', () => {
   it('retorna 405 quando o metodo nao e suportado', async () => {
     const { default: handler } = await import('./index');
     const { res, state } = createMockRes();
-    const req = createMockReq({ method: 'POST' });
+    const req = createMockReq({ method: 'PATCH' });
 
     await handler(req, res);
 
     expect(state.statusCode).toBe(405);
-    expect(state.headers.Allow).toBe('GET');
+    expect(state.headers.Allow).toBe('GET, POST, PUT');
     expect(state.jsonBody).toEqual({ erro: 'Metodo nao permitido' });
     expect(mockedListarProcedimentosRealizados).not.toHaveBeenCalled();
   });
@@ -38,3 +38,5 @@ describe('/api/procedimentos-realizados', () => {
     expect(mockedListarProcedimentosRealizados).toHaveBeenCalledWith(req, res);
   });
 });
+
+

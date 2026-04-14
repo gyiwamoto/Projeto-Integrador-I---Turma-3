@@ -8,6 +8,7 @@ import {
 import pool from '../api/_lib/db';
 import { gerarSenhaHash } from '../api/_lib/password';
 import type { CriarUsuarioInput, JwtUsuarioPayload, TipoUsuario, Usuario } from '../api/_lib/types';
+import { extrairIdDaUrlNumero, obterBody } from './request-utils.service';
 
 interface CriarUsuarioBody {
   nome?: string;
@@ -21,36 +22,6 @@ interface EditarUsuarioBody {
   email?: string;
   senha?: string;
   tipo_usuario?: TipoUsuario;
-}
-
-function extrairIdDaUrl(req: VercelRequest): number {
-  const { id } = req.query;
-
-  if (!id || Array.isArray(id)) {
-    throw new AuthError('ID invalido.', 400);
-  }
-
-  const parsed = Number(id);
-
-  if (!Number.isFinite(parsed)) {
-    throw new AuthError('ID deve ser um numero valido.', 400);
-  }
-
-  return parsed;
-}
-
-function obterBodyCriacao(req: VercelRequest): CriarUsuarioBody {
-  if (!req.body) return {};
-  if (typeof req.body === 'string') return JSON.parse(req.body) as CriarUsuarioBody;
-  if (typeof req.body === 'object') return req.body as CriarUsuarioBody;
-  return {};
-}
-
-function obterBodyEdicao(req: VercelRequest): EditarUsuarioBody {
-  if (!req.body) return {};
-  if (typeof req.body === 'string') return JSON.parse(req.body) as EditarUsuarioBody;
-  if (typeof req.body === 'object') return req.body as EditarUsuarioBody;
-  return {};
 }
 
 function validarEntradaCriacao(body: CriarUsuarioBody): CriarUsuarioInput {
@@ -89,8 +60,10 @@ function validarEntradaCriacao(body: CriarUsuarioBody): CriarUsuarioInput {
 }
 
 export async function listarUsuarios(req: VercelRequest, res: VercelResponse) {
+  let usuarioLogado;
+
   try {
-    const usuarioLogado = await autenticarRequisicao(req);
+    usuarioLogado = await autenticarRequisicao(req);
     verificarAdminAutorizado(usuarioLogado);
   } catch (error) {
     if (error instanceof AuthError) {
@@ -104,6 +77,8 @@ export async function listarUsuarios(req: VercelRequest, res: VercelResponse) {
     'SELECT id, nome, email, tipo_usuario, criado_em FROM usuarios ORDER BY id',
   );
 
+  res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
+
   return res.status(200).json({
     total: resultado.rowCount ?? 0,
     usuarios: resultado.rows,
@@ -112,7 +87,7 @@ export async function listarUsuarios(req: VercelRequest, res: VercelResponse) {
 
 export async function obterUsuarioPorId(req: VercelRequest, res: VercelResponse) {
   try {
-    const id = extrairIdDaUrl(req);
+    const id = extrairIdDaUrlNumero(req);
 
     let usuarioLogado: JwtUsuarioPayload;
     try {
@@ -141,6 +116,8 @@ export async function obterUsuarioPorId(req: VercelRequest, res: VercelResponse)
       return res.status(404).json({ erro: 'Usuario nao encontrado.' });
     }
 
+    res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
+
     return res.status(200).json({ usuario: resultado.rows[0] });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -163,7 +140,7 @@ export async function criarUsuario(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const body = obterBodyCriacao(req);
+    const body = obterBody<CriarUsuarioBody>(req);
     const dados = validarEntradaCriacao(body);
 
     const senhaHash = await gerarSenhaHash(dados.senha);
@@ -202,7 +179,7 @@ export async function criarUsuario(req: VercelRequest, res: VercelResponse) {
 
 export async function editarUsuario(req: VercelRequest, res: VercelResponse) {
   try {
-    const id = extrairIdDaUrl(req);
+    const id = extrairIdDaUrlNumero(req);
 
     let usuarioLogado: JwtUsuarioPayload;
     try {
@@ -222,7 +199,7 @@ export async function editarUsuario(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    const body = obterBodyEdicao(req);
+    const body = obterBody<EditarUsuarioBody>(req);
 
     const campos: { chave: string; valor: unknown }[] = [];
 
@@ -300,7 +277,7 @@ export async function editarUsuario(req: VercelRequest, res: VercelResponse) {
 
 export async function deletarUsuario(req: VercelRequest, res: VercelResponse) {
   try {
-    const id = extrairIdDaUrl(req);
+    const id = extrairIdDaUrlNumero(req);
 
     let usuarioLogado: JwtUsuarioPayload;
     try {

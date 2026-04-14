@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from './http.types';
 import { AuthError, autenticarRequisicao, verificarAdminAutorizado } from '../api/_lib/auth';
 import pool from '../api/_lib/db';
+import { extrairIdDaUrlString, obterBody } from './request-utils.service';
 
 interface ConvenioListagem {
   id: string;
@@ -17,23 +18,6 @@ interface ConvenioBody {
   ativo?: boolean;
 }
 
-function extrairIdDaUrl(req: VercelRequest): string {
-  const { id } = req.query;
-
-  if (!id || Array.isArray(id)) {
-    throw new AuthError('ID invalido.', 400);
-  }
-
-  return id;
-}
-
-function obterBody(req: VercelRequest): ConvenioBody {
-  if (!req.body) return {};
-  if (typeof req.body === 'string') return JSON.parse(req.body) as ConvenioBody;
-  if (typeof req.body === 'object') return req.body as ConvenioBody;
-  return {};
-}
-
 export async function listarConvenios(req: VercelRequest, res: VercelResponse) {
   try {
     await autenticarRequisicao(req);
@@ -48,6 +32,8 @@ export async function listarConvenios(req: VercelRequest, res: VercelResponse) {
   const resultado = await pool.query<ConvenioListagem>(
     'SELECT cnpj AS id, nome, cnpj, ativo, atualizado_em, criado_em FROM convenios ORDER BY nome ASC',
   );
+
+  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
 
   return res.status(200).json({
     total: resultado.rowCount ?? 0,
@@ -68,7 +54,7 @@ export async function criarConvenio(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const body = obterBody(req);
+    const body = obterBody<ConvenioBody>(req);
 
     if (typeof body.nome !== 'string' || !body.nome.trim()) {
       return res.status(400).json({ erro: 'Nome do convenio eh obrigatorio.' });
@@ -115,7 +101,7 @@ export async function editarConvenio(req: VercelRequest, res: VercelResponse) {
   let cnpjAtual: string;
 
   try {
-    cnpjAtual = extrairIdDaUrl(req);
+    cnpjAtual = extrairIdDaUrlString(req);
     const usuario = await autenticarRequisicao(req);
     verificarAdminAutorizado(usuario);
   } catch (error) {
@@ -127,7 +113,7 @@ export async function editarConvenio(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const body = obterBody(req);
+    const body = obterBody<ConvenioBody>(req);
     const campos: { chave: string; valor: unknown }[] = [];
 
     if (body.nome !== undefined) {
@@ -192,7 +178,7 @@ export async function deletarConvenio(req: VercelRequest, res: VercelResponse) {
   let cnpj: string;
 
   try {
-    cnpj = extrairIdDaUrl(req);
+    cnpj = extrairIdDaUrlString(req);
     const usuario = await autenticarRequisicao(req);
     verificarAdminAutorizado(usuario);
   } catch (error) {

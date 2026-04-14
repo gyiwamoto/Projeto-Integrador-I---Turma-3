@@ -1,7 +1,9 @@
 import type { VercelRequest, VercelResponse } from './http.types';
-import { AuthError, autenticarRequisicao } from '../api/_lib/auth';
+import { autenticarRequisicao } from '../api/_lib/auth';
 import pool from '../api/_lib/db';
+import { formatarDataSaidaBr, normalizarDataIso } from '../api/_lib/date-time';
 import { registrarLogAcesso } from './logsAcessos.service';
+import { responderErroAutenticacao } from './request-utils.service';
 
 interface ProcedimentoRealizadoListagem {
   id: string;
@@ -28,12 +30,14 @@ interface ProcedimentoAtualizacaoPayload {
   observacoes: string | null;
 }
 
-function responderErro(res: VercelResponse, error: unknown): VercelResponse {
-  if (error instanceof AuthError) {
-    return res.status(error.statusCode).json({ erro: error.message });
-  }
-
-  return res.status(401).json({ erro: 'Requer autenticacao.' });
+function normalizarProcedimentoSaida(
+  procedimento: ProcedimentoRealizadoListagem,
+): ProcedimentoRealizadoListagem {
+  return {
+    ...procedimento,
+    data_procedimento: formatarDataSaidaBr(procedimento.data_procedimento),
+    criado_em: formatarDataSaidaBr(procedimento.criado_em, true),
+  };
 }
 
 export async function listarProcedimentosRealizados(req: VercelRequest, res: VercelResponse) {
@@ -42,7 +46,7 @@ export async function listarProcedimentosRealizados(req: VercelRequest, res: Ver
   try {
     usuarioAutenticado = await autenticarRequisicao(req);
   } catch (error) {
-    return responderErro(res, error);
+    return responderErroAutenticacao(res, error);
   }
 
   const consultaId = typeof req.query.consulta_id === 'string' ? req.query.consulta_id.trim() : '';
@@ -64,23 +68,37 @@ export async function listarProcedimentosRealizados(req: VercelRequest, res: Ver
     `SELECT pr.id,
             pr.consulta_id,
             pr.tratamento_id,
-            t.nome AS tratamento_nome,
+            CASE pr.tratamento_id
+              WHEN '100' THEN 'AVALIACAO + LIMPEZA'
+              WHEN '110' THEN 'EXTRACAO'
+              WHEN '120' THEN 'RESTAURACAO'
+              WHEN '130' THEN 'PROTESE'
+              WHEN '140' THEN 'CANAL'
+              WHEN '150' THEN 'IMPLANTE'
+              WHEN '160' THEN 'LIMPEZA'
+              WHEN '170' THEN 'MANUTENCAO ORTODONTIA'
+              WHEN '171' THEN 'MONTAGEM'
+              WHEN '180' THEN 'HOF'
+              WHEN '115' THEN 'EXTRACAO 3o. MOLAR'
+              ELSE 'Procedimento'
+            END AS tratamento_nome,
             pr.dente,
             pr.face,
             pr.data_procedimento,
             pr.observacoes,
             pr.criado_em
        FROM procedimentos_realizados pr
-       LEFT JOIN tratamentos t ON t.id = pr.tratamento_id
        LEFT JOIN consultas c ON c.id = pr.consulta_id${criterios.length ? `
       WHERE ${criterios.join(' AND ')}` : ''}
       ORDER BY pr.data_procedimento DESC`,
     parametros,
   );
 
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+
   return res.status(200).json({
     total: resultado.rowCount ?? 0,
-    procedimentos_realizados: resultado.rows,
+    procedimentos_realizados: resultado.rows.map(normalizarProcedimentoSaida),
   });
 }
 
@@ -90,7 +108,7 @@ export async function criarProcedimentoRealizado(req: VercelRequest, res: Vercel
   try {
     usuarioAutenticado = await autenticarRequisicao(req);
   } catch (error) {
-    return responderErro(res, error);
+    return responderErroAutenticacao(res, error);
   }
 
   const body = (req.body ?? {}) as Record<string, unknown>;
@@ -99,10 +117,15 @@ export async function criarProcedimentoRealizado(req: VercelRequest, res: Vercel
   const dente = Number(body.dente);
   const face = typeof body.face === 'string' ? body.face.trim().toUpperCase() : '';
   const dataProcedimento = typeof body.data_procedimento === 'string' ? body.data_procedimento.trim() : '';
+  const dataProcedimentoNormalizada = dataProcedimento ? normalizarDataIso(dataProcedimento) : null;
   const observacoes = typeof body.observacoes === 'string' ? body.observacoes.trim() : null;
 
   if (!consultaId || !tratamentoId || !Number.isInteger(dente) || !dataProcedimento) {
     return res.status(400).json({ erro: 'Dados obrigatorios ausentes.' });
+  }
+
+  if (!dataProcedimentoNormalizada) {
+    return res.status(400).json({ erro: 'data_procedimento invalida. Use formato DD-MM-YYYY.' });
   }
 
   if (dente < 11 || dente > 48) {
@@ -128,7 +151,7 @@ export async function criarProcedimentoRealizado(req: VercelRequest, res: Vercel
     `INSERT INTO procedimentos_realizados (consulta_id, tratamento_id, dente, face, data_procedimento, observacoes)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id, consulta_id, tratamento_id, dente, face, data_procedimento, observacoes, criado_em`,
-    [consultaId, tratamentoId, dente, face, dataProcedimento, observacoes],
+    [consultaId, tratamentoId, dente, face, dataProcedimentoNormalizada, observacoes],
   );
 
   const procedimento = inserido.rows[0];
@@ -144,7 +167,7 @@ export async function criarProcedimentoRealizado(req: VercelRequest, res: Vercel
 
   return res.status(201).json({
     mensagem: 'Procedimento registrado com sucesso.',
-    procedimento,
+    procedimento: procedimento ? normalizarProcedimentoSaida(procedimento) : procedimento,
   });
 }
 
@@ -154,7 +177,7 @@ export async function atualizarProcedimentoRealizado(req: VercelRequest, res: Ve
   try {
     usuarioAutenticado = await autenticarRequisicao(req);
   } catch (error) {
-    return responderErro(res, error);
+    return responderErroAutenticacao(res, error);
   }
 
   const procedimentoId = typeof req.query.id === 'string' ? req.query.id.trim() : '';
@@ -163,10 +186,15 @@ export async function atualizarProcedimentoRealizado(req: VercelRequest, res: Ve
   const dente = Number(body.dente);
   const face = typeof body.face === 'string' ? body.face.trim().toUpperCase() : '';
   const dataProcedimento = typeof body.data_procedimento === 'string' ? body.data_procedimento.trim() : '';
+  const dataProcedimentoNormalizada = dataProcedimento ? normalizarDataIso(dataProcedimento) : null;
   const observacoes = typeof body.observacoes === 'string' ? body.observacoes.trim() : null;
 
   if (!procedimentoId || !tratamentoId || !Number.isInteger(dente) || !dataProcedimento) {
     return res.status(400).json({ erro: 'Dados obrigatorios ausentes.' });
+  }
+
+  if (!dataProcedimentoNormalizada) {
+    return res.status(400).json({ erro: 'data_procedimento invalida. Use formato DD-MM-YYYY.' });
   }
 
   if (dente < 11 || dente > 48) {
@@ -199,7 +227,7 @@ export async function atualizarProcedimentoRealizado(req: VercelRequest, res: Ve
             observacoes = $6
       WHERE id = $1
       RETURNING id, consulta_id, tratamento_id, dente, face, data_procedimento, observacoes, criado_em`,
-    [procedimentoId, tratamentoId, dente, face, dataProcedimento, observacoes],
+    [procedimentoId, tratamentoId, dente, face, dataProcedimentoNormalizada, observacoes],
   );
 
   const procedimento = atualizado.rows[0];
@@ -215,6 +243,6 @@ export async function atualizarProcedimentoRealizado(req: VercelRequest, res: Ve
 
   return res.status(200).json({
     mensagem: 'Procedimento atualizado com sucesso.',
-    procedimento,
+    procedimento: procedimento ? normalizarProcedimentoSaida(procedimento) : procedimento,
   });
 }

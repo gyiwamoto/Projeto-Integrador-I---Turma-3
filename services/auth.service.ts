@@ -9,6 +9,7 @@ import {
 import { validarSenha } from '../api/_lib/password';
 import type { TipoUsuario } from '../api/_lib/types';
 import { registrarLogFalha, registrarLogSucesso } from './logsAcessos.service';
+import { obterBody } from './request-utils.service';
 
 interface LoginBody {
   email?: string;
@@ -21,22 +22,6 @@ interface UsuarioLoginRow {
   email: string;
   senha_hash: string;
   tipo_usuario: TipoUsuario;
-}
-
-function obterBody(req: VercelRequest): LoginBody {
-  if (!req.body) {
-    return {};
-  }
-
-  if (typeof req.body === 'string') {
-    return JSON.parse(req.body) as LoginBody;
-  }
-
-  if (typeof req.body === 'object') {
-    return req.body as LoginBody;
-  }
-
-  return {};
 }
 
 function validarEntradaLogin(body: LoginBody): { email: string; senha: string } {
@@ -65,7 +50,7 @@ export async function autenticarLogin(req: VercelRequest, res: VercelResponse) {
   try {
     const { default: pool } = await import('../api/_lib/db');
 
-    const body = obterBody(req);
+    const body = obterBody<LoginBody>(req);
     const { email, senha } = validarEntradaLogin(body);
     emailInformado = email;
 
