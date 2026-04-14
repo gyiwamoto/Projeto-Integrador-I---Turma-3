@@ -4,8 +4,9 @@ Aplicacao Angular do projeto, com autenticacao, dashboard e modulos clinicos.
 
 ## Status atual
 
-- Versao: `1.0.0`
-- Paginas implementadas: dashboard, login, agenda, consultas, pacientes, convenios, tratamentos, usuarios e minha conta.
+- Versao: `1.1.0`
+- Paginas implementadas: dashboard, login, agenda, consultas, pacientes, convenios, usuarios e minha conta.
+- O cadastro de tratamentos foi substituido por catalogo fixo de procedimentos.
 - Componentes reutilizaveis com testes funcionais: filtros, modal, sidebar, tabela, toast-container e agenda-calendario.
 - Resultado da ultima execucao de testes: `205 passed (205)` em `2026-04-03`.
 
@@ -48,6 +49,10 @@ npm run start:proxy -- --port 4200
 Com isso, chamadas para `/api/*` sao encaminhadas para `http://localhost:3000` por meio de `proxy.conf.json`.
 
 ## Notas funcionais recentes
+
+- Escolha de arquitetura para economia de requisicoes:
+  - o modulo de tratamentos foi removido por se tratar de dados com baixa frequencia de alteracao;
+  - o frontend agora utiliza catalogo fixo de procedimentos, reduzindo chamadas de API e simplificando o fluxo.
 
 - Tela de pacientes alinhada ao schema do banco (`pacientes`):
   - `codigo_paciente` e exibido como somente leitura e gerado no backend.

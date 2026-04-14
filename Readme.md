@@ -4,10 +4,11 @@ Sistema de gerenciamento de consultório odontológico desenvolvido como Projeto
 
 ## Status do projeto (parcial)
 
-- Versao atual: `1.0.0`
-- Modulos ativos: autenticacao, dashboard, agenda, pacientes, consultas, convenios, tratamentos, usuarios e minha conta.
+- Versao atual: `1.1.0`
+- Modulos ativos: autenticacao, dashboard, agenda, pacientes, consultas, convenios, usuarios e minha conta.
+- Catalogo de procedimentos fixos adotado no lugar do modulo de tratamentos.
 - Backend com rotas principais de CRUD e validacao de sessao.
-- Banco com migrations versionadas de `001` ate `009`.
+- Banco com migrations versionadas de `001` ate `013`.
 - Testes frontend executados em 2026-04-03: `205 passed (205)`.
 
 Documentos de acompanhamento:
@@ -41,8 +42,10 @@ Documentos de acompanhamento:
 
 ### Pré-requisitos
 
-- Node.js >= 22
+- Node.js 22.x
 - npm >= 10
+
+Observacao: em Windows, o `vercel dev` pode apresentar erro de runtime (`UV_HANDLE_CLOSING`) com Node 24.x. Para ambiente local da API, utilize Node 22.x.
 
 ### Workspace (recomendado)
 
@@ -139,7 +142,12 @@ O arquivo `vercel.json` na raiz ja define o fluxo de deploy para o monorepo:
 - instala dependencias de `frontend` e `api`
 - faz build do Angular em `frontend`
 - publica os arquivos estaticos de `frontend/dist/dentista-organizado/browser`
-- expoe apenas os endpoints de API mapeados explicitamente (`/api/auth`, `/api/usuarios`, `/api/pacientes`, `/api/convenios`, `/api/consultas`, `/api/tratamentos`, `/api/procedimentos-realizados`)
+- expoe apenas os endpoints de API mapeados explicitamente (`/api/auth`, `/api/usuarios`, `/api/pacientes`, `/api/convenios`, `/api/consultas`, `/api/procedimentos-realizados`)
+
+### Decisao de arquitetura: procedimentos fixos
+
+- A remocao de `/api/tratamentos` foi uma escolha para economia de requisicoes.
+- Como esse conjunto de dados tem baixa frequencia de alteracao, o projeto passou a usar um catalogo fixo de procedimentos, reduzindo chamadas de API e simplificando o fluxo.
 
 ## Rotas de API
 
@@ -156,10 +164,6 @@ O arquivo `vercel.json` na raiz ja define o fluxo de deploy para o monorepo:
 - `PUT /api/convenios?id=<id>`: editar convenio
 - `DELETE /api/convenios?id=<id>`: remover convenio
 - `GET /api/consultas`: listar consultas
-- `GET /api/tratamentos`: listar tratamentos
-- `POST /api/tratamentos`: criar tratamento
-- `PUT /api/tratamentos?id=<id>`: editar tratamento
-- `DELETE /api/tratamentos?id=<id>`: remover tratamento
 - `GET /api/procedimentos-realizados`: listar procedimentos realizados
 
 ### Observacao importante sobre pacientes

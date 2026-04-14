@@ -4,8 +4,9 @@ Esta pasta contem o backend do projeto, usando funcoes serverless da Vercel.
 
 ## Status atual
 
-- Versao: `1.0.0`
-- Endpoints ativos para autenticacao e modulos principais (usuarios, pacientes, convenios, consultas, tratamentos e procedimentos realizados).
+- Versao: `1.1.0`
+- Endpoints ativos para autenticacao e modulos principais (usuarios, pacientes, convenios, consultas e procedimentos realizados).
+- O modulo de tratamentos foi removido e substituido por catalogo fixo de procedimentos.
 - Base preparada para execucao local via `vercel dev`.
 - Parte dos fluxos ainda utiliza dados mockados no frontend e sera substituida por integracoes completas nas proximas iteracoes.
 
@@ -26,8 +27,6 @@ api/
 |  |- index.ts     # /api/convenios (GET, POST, PUT, DELETE)
 |- consultas/
 |  |- index.ts     # /api/consultas (GET)
-|- tratamentos/
-|  |- index.ts     # /api/tratamentos (GET, POST, PUT, DELETE)
 |- procedimentos-realizados/
 |  |- index.ts     # /api/procedimentos-realizados (GET)
 |- usuarios/
@@ -53,11 +52,12 @@ api/
 - `PUT /api/convenios?id=<id>`: edita convenio (autenticado)
 - `DELETE /api/convenios?id=<id>`: deleta convenio (admin)
 - `GET /api/consultas`: lista consultas (autenticado)
-- `GET /api/tratamentos`: lista tratamentos (autenticado)
-- `POST /api/tratamentos`: cria tratamento (autenticado)
-- `PUT /api/tratamentos?id=<id>`: edita tratamento (autenticado)
-- `DELETE /api/tratamentos?id=<id>`: deleta tratamento (admin)
 - `GET /api/procedimentos-realizados`: lista procedimentos realizados (autenticado)
+
+### Motivo da mudanca
+
+- A remocao do endpoint `/api/tratamentos` foi uma decisao para economia de requisicoes.
+- Como os dados de procedimentos mudam com baixa frequencia, o sistema passou a usar catalogo fixo, reduzindo chamadas desnecessarias e simplificando a manutencao.
 
 ### Pacientes: codigo gerado no servidor
 
@@ -68,13 +68,13 @@ api/
 
 ### Admin (tipo_usuario = "admin")
 - ✅ Acessar todas as rotas GET
-- ✅ Criar, editar e excluir pacientes | usuarios | consultas | convenios | tratamentos | procedimentos realizados
+- ✅ Criar, editar e excluir pacientes | usuarios | consultas | convenios | procedimentos realizados
 
 
 ### Dentista | Recepcionista (tipo_usuario = "dentista" | "recepcionista")
 - ✅ Acessar todas as rotas GET permitidas
-- ❌ Não podem excluir pacientes | usuarios | consultas | convenios | tratamentos | procedimentos realizados
-- ✅ Podem editar pacientes | consultas | tratamentos | procedimentos realizados | convenios 
+- ❌ Não podem excluir pacientes | usuarios | consultas | convenios | procedimentos realizados
+- ✅ Podem editar pacientes | consultas | procedimentos realizados | convenios 
 
 
 ### Respostas de Autorização
@@ -95,6 +95,8 @@ npm install --prefix api
 # validar tipos TypeScript
 npx tsc --noEmit -p api/tsconfig.json
 ```
+
+Observacao: no Windows, rode a API local com Node 22.x. Em Node 24.x o `vercel dev` pode falhar com erro `UV_HANDLE_CLOSING`.
 
 ## Comandos de banco (migrations)
 

@@ -4,7 +4,7 @@ Esta pasta guarda as migrations SQL versionadas do projeto.
 
 ## Status atual
 
-- Versao: `1.0.0`
+- Versao: `1.1.0`
 - Migrations disponiveis: `001` ate `013`
 - Estrutura principal do dominio clinico ativa para usuarios, pacientes, convenios, consultas, procedimentos e logs.
 - A tabela `tratamentos` foi removida na migration `011` por decisao de economia de requisicoes, ja que esses dados mudam com baixa frequencia e passaram para catalogo fixo.
