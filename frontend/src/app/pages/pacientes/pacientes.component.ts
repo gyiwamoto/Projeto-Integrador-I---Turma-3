@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -21,9 +21,11 @@ import { AgendaService } from '../../services/agenda.service';
 import { PacientesService } from '../../services/pacientes.service';
 import { ProcedimentosRealizadosService } from '../../services/procedimentos-realizados.service';
 import { ToastService } from '../../services/toast.service';
-import { dentes, faces } from '../../utils/odontograma';
+import { dentes, faces } from '../../constants/odontograma';
 import { ProcedimentoRealizadoItem } from '../../interfaces/ProcedimentoRealizado';
-import { formatarData } from '../../utils/formatar-data';
+import { formatarData, formatarDataHora, formatarIntervaloDatas } from '../../utils/formatar-data';
+import { formatarStatusConsulta } from '../../utils/enums-status';
+import { formatarTextoCurto } from '../../utils/formatar-texto';
 
 type ModoFormularioPaciente = 'criar' | 'editar';
 
@@ -45,7 +47,7 @@ export class PacientesComponent implements OnInit {
   private readonly conveniosService = inject(ConveniosService);
   private readonly procedimentosRealizadosService = inject(ProcedimentosRealizadosService);
 
-  filtros: Record<string, string> = {};
+  private readonly filtrosState = signal<Record<string, string>>({});
   carregando = false;
   salvando = false;
   excluindo = false;
@@ -55,11 +57,11 @@ export class PacientesComponent implements OnInit {
 
   pacienteSelecionado: PacienteItem | null = null;
   pacienteParaExcluir: PacienteItem | null = null;
-  convenios: ConvenioItem[] = [];
-  consultas: AgendaConsulta[] = [];
+  private readonly conveniosState = signal<ConvenioItem[]>([]);
+  private readonly consultasState = signal<AgendaConsulta[]>([]);
   consultaSelecionada: AgendaConsulta | null = null;
   consultaDetalheAberto = false;
-  procedimentosConsultaSelecionada: ProcedimentoRealizadoItem[] = [];
+  private readonly procedimentosConsultaSelecionadaState = signal<ProcedimentoRealizadoItem[]>([]);
   carregandoProcedimentos = false;
 
   readonly dentesOdontograma = dentes;
@@ -76,12 +78,12 @@ export class PacientesComponent implements OnInit {
     {
       chave: 'status',
       titulo: 'Status',
-      formatador: (valor) => this.formatarStatusConsulta(valor),
+      formatador: (valor) => formatarStatusConsulta(String(valor ?? '')),
     },
     {
       chave: 'observacoes',
       titulo: 'Observacoes',
-      formatador: (valor) => this.formatarTextoCurto(valor),
+      formatador: (valor) => formatarTextoCurto(valor),
     },
   ];
 
@@ -154,29 +156,14 @@ export class PacientesComponent implements OnInit {
     convenioId: [''],
   });
 
-  pacientes: PacienteItem[] = [];
+  private readonly pacientesState = signal<PacienteItem[]>([]);
 
-  ngOnInit(): void {
-    this.carregarConsultas();
-    this.carregarConvenios();
-    this.carregarPacientes();
+  readonly pacientesFiltradosSignal = computed(() => {
+    const termo = (this.filtrosState()['busca'] ?? '').trim().toLowerCase();
+    const convenioId = (this.filtrosState()['convenio_cnpj'] ?? '').trim();
+    const whatsapp = (this.filtrosState()['whatsapp'] ?? '').trim().toLowerCase();
 
-    if (this.route.snapshot.queryParamMap.get('novo') === '1') {
-      this.abrirNovoPaciente();
-      void this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: {},
-        replaceUrl: true,
-      });
-    }
-  }
-
-  get pacientesFiltrados(): PacienteItem[] {
-    const termo = (this.filtros['busca'] ?? '').trim().toLowerCase();
-    const convenioId = (this.filtros['convenio_cnpj'] ?? '').trim();
-    const whatsapp = (this.filtros['whatsapp'] ?? '').trim().toLowerCase();
-
-    return this.pacientes.filter((paciente) => {
+    return this.pacientesState().filter((paciente) => {
       const passouBusca =
         !termo ||
         [
@@ -196,6 +183,65 @@ export class PacientesComponent implements OnInit {
 
       return passouBusca && passouConvenio && passouWhatsapp;
     });
+  });
+
+  get filtros(): Record<string, string> {
+    return this.filtrosState();
+  }
+
+  set filtros(valor: Record<string, string>) {
+    this.filtrosState.set(valor);
+  }
+
+  get convenios(): ConvenioItem[] {
+    return this.conveniosState();
+  }
+
+  set convenios(valor: ConvenioItem[]) {
+    this.conveniosState.set(valor);
+  }
+
+  get consultas(): AgendaConsulta[] {
+    return this.consultasState();
+  }
+
+  set consultas(valor: AgendaConsulta[]) {
+    this.consultasState.set(valor);
+  }
+
+  get procedimentosConsultaSelecionada(): ProcedimentoRealizadoItem[] {
+    return this.procedimentosConsultaSelecionadaState();
+  }
+
+  set procedimentosConsultaSelecionada(valor: ProcedimentoRealizadoItem[]) {
+    this.procedimentosConsultaSelecionadaState.set(valor);
+  }
+
+  get pacientes(): PacienteItem[] {
+    return this.pacientesState();
+  }
+
+  set pacientes(valor: PacienteItem[]) {
+    this.pacientesState.set(valor);
+  }
+
+  ngOnInit(): void {
+    this.carregarConsultas();
+    this.carregarConvenios();
+    this.carregarPacientes(this.obterIntervaloInicialSemanaOperacional());
+
+    if (this.route.snapshot.queryParamMap.get('novo') === '1') {
+      this.abrirNovoPaciente();
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {},
+        replaceUrl: true,
+      });
+    }
+  }
+
+  get pacientesFiltrados(): PacienteItem[] {
+    return this.pacientesFiltradosSignal();
   }
 
   onFiltrosChange(filtros: Record<string, string>): void {
@@ -236,7 +282,11 @@ export class PacientesComponent implements OnInit {
     return this.consultas
       .filter((consulta) => consulta.pacienteId === this.pacienteSelecionado?.id)
       .slice()
-      .sort((a, b) => new Date(b.dataConsulta).getTime() - new Date(a.dataConsulta).getTime());
+      .sort((a, b) =>
+        formatarDataHora(b.dataConsulta, 'input').localeCompare(
+          formatarDataHora(a.dataConsulta, 'input'),
+        ),
+      );
   }
 
   get linhasConsultasPaciente(): TabelaLinha[] {
@@ -424,34 +474,6 @@ export class PacientesComponent implements OnInit {
     return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
   }
 
-  private formatarTextoCurto(valor: unknown): string {
-    if (typeof valor !== 'string' || !valor.trim()) {
-      return '-';
-    }
-
-    return valor.trim().length > 42 ? `${valor.trim().slice(0, 42)}...` : valor.trim();
-  }
-
-  private formatarStatusConsulta(valor: unknown): string {
-    if (typeof valor !== 'string' || !valor.trim()) {
-      return '-';
-    }
-
-    if (valor === 'agendado') {
-      return 'Agendado';
-    }
-
-    if (valor === 'realizado') {
-      return 'Realizado';
-    }
-
-    if (valor === 'cancelado') {
-      return 'Cancelado';
-    }
-
-    return valor;
-  }
-
   private carregarConsultas(): void {
     this.agendaService.listarConsultas().subscribe({
       next: (consultas) => {
@@ -485,10 +507,10 @@ export class PacientesComponent implements OnInit {
     });
   }
 
-  private carregarPacientes(): void {
+  private carregarPacientes(intervalo?: { dataInicio?: string; dataFim?: string }): void {
     this.carregando = true;
 
-    this.pacientesService.listarPacientes().subscribe({
+    this.pacientesService.listarPacientes({ intervalo }).subscribe({
       next: (resposta) => {
         this.pacientes = resposta?.pacientes ?? [];
         this.carregando = false;
@@ -500,6 +522,19 @@ export class PacientesComponent implements OnInit {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  private obterIntervaloInicialSemanaOperacional(): { dataInicio: string; dataFim: string } {
+    const hoje = new Date();
+    const inicio = new Date(hoje);
+    inicio.setDate(inicio.getDate() - 1);
+
+    const fim = new Date(hoje);
+    fim.setDate(fim.getDate() + 6);
+
+    return {
+      ...formatarIntervaloDatas(inicio, fim, 'backend'),
+    };
   }
 
   private carregarConvenios(): void {

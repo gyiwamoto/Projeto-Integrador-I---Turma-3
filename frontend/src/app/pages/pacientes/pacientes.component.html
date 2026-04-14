@@ -100,7 +100,7 @@
     <div class="consulta-meta">
       <p><strong>Paciente:</strong> {{ consultaSelecionada.pacienteNome }}</p>
       <p><strong>Profissional:</strong> {{ consultaSelecionada.profissionalNome }}</p>
-      <p><strong>Data:</strong> {{ consultaSelecionada.dataConsulta | date:'dd/MM/yyyy HH:mm' }}</p>
+      <p><strong>Data:</strong> {{ consultaSelecionada.dataConsulta | date:'dd-MM-yyyy HH:mm' }}</p>
       <p><strong>Status:</strong> {{ consultaSelecionada.status | titlecase }}</p>
       <p><strong>Convenio:</strong> {{ consultaSelecionada.convenioNome ?? '-' }}</p>
       <p><strong>Carteirinha:</strong> {{ consultaSelecionada.numeroCarteirinha ?? '-' }}</p>

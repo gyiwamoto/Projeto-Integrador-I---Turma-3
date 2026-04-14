@@ -37,7 +37,7 @@
 
 .atendimento-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -66,13 +66,32 @@
   display: grid;
   gap: 1rem;
   min-height: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: #f8fbff;
+  padding: clamp(1rem, 2.5vw, 2rem);
 }
 
-.atendimento-detalhe__header {
+.atendimento-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: rgba(10, 23, 38, 0.62);
+}
+
+.atendimento-modal {
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+}
+
+.atendimento-detalhe__intro {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
+  min-width: 0;
 
   h2,
   h3 {
@@ -84,6 +103,20 @@
     margin: 0.35rem 0 0;
     color: #5f7488;
   }
+}
+
+.atendimento-detalhe__intro-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.atendimento-modal__close {
+  padding-inline: 1.1rem;
+  background: rgba(187, 62, 62, 0.14);
+  color: #972b2b;
 }
 
 .status-chip {
@@ -153,6 +186,7 @@ label {
   gap: 0.4rem;
   color: #17324d;
   font-weight: 600;
+  min-width: 0;
 
   span {
     font-size: 0.85rem;
@@ -163,6 +197,8 @@ label {
   textarea,
   select {
     width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     border: 1px solid rgba(18, 34, 54, 0.12);
     border-radius: 0.9rem;
     padding: 0.8rem 0.9rem;
@@ -271,20 +307,117 @@ label {
   }
 }
 
+.finalizacao-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(7, 19, 31, 0.68);
+}
+
+.finalizacao-modal-card {
+  width: min(28rem, 100%);
+  border-radius: 1rem;
+  border: 1px solid rgba(20, 48, 74, 0.12);
+  background: #fff;
+  padding: 1rem;
+  box-shadow: 0 24px 60px rgba(9, 18, 29, 0.3);
+
+  h3 {
+    margin: 0;
+    color: #17324d;
+  }
+
+  p {
+    margin: 0.45rem 0 1rem;
+    color: #5f7488;
+  }
+}
+
+.campo-senha {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  input {
+    flex: 1 1 auto;
+  }
+}
+
+.botao-olho {
+  border: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.7rem;
+  background: rgba(31, 111, 141, 0.08);
+  color: #17324d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.finalizacao-modal-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+
 @media (max-width: 1120px) {
-  .atendimento-layout {
-    grid-template-columns: 1fr;
+  .atendimento-detalhe {
+    padding: 1rem;
   }
 }
 
 @media (max-width: 720px) {
-  .grid-2,
-  .atendimento-detalhe__header {
+  .grid-2 {
     grid-template-columns: 1fr;
-    display: grid;
   }
 
-  .atendimento-detalhe__header {
-    align-items: stretch;
+  .atendimento-detalhe__intro {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .atendimento-detalhe__intro-actions {
+    width: 100%;
+    justify-content: stretch;
+
+    .status-chip,
+    .atendimento-modal__close {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .procedimento-form__actions {
+    justify-content: stretch;
+
+    .primary-action,
+    .secondary-action {
+      width: 100%;
+    }
+  }
+
+  .finalizacao-modal-acoes {
+    flex-direction: column;
+
+    .primary-action,
+    .secondary-action {
+      width: 100%;
+    }
   }
 }

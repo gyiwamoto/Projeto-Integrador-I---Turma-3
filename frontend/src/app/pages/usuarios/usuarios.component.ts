@@ -7,7 +7,7 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { FiltroCampo, FiltrosComponent } from '../../components/filtros/filtros.component';
 import { ModalComponent } from '../../components/modal/modal.component';
@@ -86,9 +86,42 @@ export class UsuariosPage implements OnInit {
   excluindo = false;
   erroMensagem = '';
   sucessoMensagem = '';
-  filtros: Record<string, string> = {};
+  private readonly filtrosState = signal<Record<string, string>>({});
 
-  usuarios: UsuarioListaItem[] = [];
+  private readonly usuariosState = signal<UsuarioListaItem[]>([]);
+  readonly usuariosFiltradosSignal = computed(() => {
+    const termo = (this.filtrosState()['busca'] ?? '').trim().toLowerCase();
+    const tipoUsuario = (this.filtrosState()['tipo_usuario'] ?? '').trim().toLowerCase();
+    const ativo = (this.filtrosState()['ativo'] ?? '').trim().toLowerCase();
+
+    return this.usuariosState().filter((usuario) => {
+      const ativoUsuario = this.usuarioEstaAtivo(usuario) ? 'sim' : 'nao';
+      const passouBusca =
+        !termo || [usuario.id, usuario.nome, usuario.email].join(' ').toLowerCase().includes(termo);
+
+      const passouTipo = !tipoUsuario || usuario.tipo_usuario.toLowerCase() === tipoUsuario;
+      const passouAtivo = !ativo || ativoUsuario === ativo;
+
+      return passouBusca && passouTipo && passouAtivo;
+    });
+  });
+
+  get filtros(): Record<string, string> {
+    return this.filtrosState();
+  }
+
+  set filtros(valor: Record<string, string>) {
+    this.filtrosState.set(valor);
+  }
+
+  get usuarios(): UsuarioListaItem[] {
+    return this.usuariosState();
+  }
+
+  set usuarios(valor: UsuarioListaItem[]) {
+    this.usuariosState.set(valor);
+  }
+
   usuarioSelecionado: UsuarioListaItem | null = null;
   usuarioParaExcluir: UsuarioListaItem | null = null;
   modalUsuarioAberto = false;
@@ -119,20 +152,7 @@ export class UsuariosPage implements OnInit {
   }
 
   get usuariosFiltrados(): UsuarioListaItem[] {
-    const termo = (this.filtros['busca'] ?? '').trim().toLowerCase();
-    const tipoUsuario = (this.filtros['tipo_usuario'] ?? '').trim().toLowerCase();
-    const ativo = (this.filtros['ativo'] ?? '').trim().toLowerCase();
-
-    return this.usuarios.filter((usuario) => {
-      const ativoUsuario = this.usuarioEstaAtivo(usuario) ? 'sim' : 'nao';
-      const passouBusca =
-        !termo || [usuario.id, usuario.nome, usuario.email].join(' ').toLowerCase().includes(termo);
-
-      const passouTipo = !tipoUsuario || usuario.tipo_usuario.toLowerCase() === tipoUsuario;
-      const passouAtivo = !ativo || ativoUsuario === ativo;
-
-      return passouBusca && passouTipo && passouAtivo;
-    });
+    return this.usuariosFiltradosSignal();
   }
 
   get linhasTabelaUsuarios(): TabelaLinha[] {

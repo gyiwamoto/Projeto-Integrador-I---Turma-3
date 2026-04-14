@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FiltroCampo, FiltrosComponent } from '../../components/filtros/filtros.component';
 import { ModalComponent } from '../../components/modal/modal.component';
@@ -64,9 +64,37 @@ export class ConveniosPage implements OnInit {
   excluindo = false;
   erroMensagem = '';
   sucessoMensagem = '';
-  filtros: Record<string, string> = {};
+  private readonly filtrosState = signal<Record<string, string>>({});
 
-  convenios: ConvenioItem[] = [];
+  private readonly conveniosState = signal<ConvenioItem[]>([]);
+  readonly conveniosFiltradosSignal = computed(() => {
+    const termo = (this.filtrosState()['busca'] ?? '').trim().toLowerCase();
+    const ativo = (this.filtrosState()['ativo'] ?? '').trim().toLowerCase();
+
+    return this.conveniosState().filter((convenio) => {
+      const passouBusca = !termo || convenio.nome.toLowerCase().includes(termo);
+      const status = convenio.ativo ? 'sim' : 'nao';
+      const passouAtivo = !ativo || status === ativo;
+
+      return passouBusca && passouAtivo;
+    });
+  });
+
+  get filtros(): Record<string, string> {
+    return this.filtrosState();
+  }
+
+  set filtros(valor: Record<string, string>) {
+    this.filtrosState.set(valor);
+  }
+
+  get convenios(): ConvenioItem[] {
+    return this.conveniosState();
+  }
+
+  set convenios(valor: ConvenioItem[]) {
+    this.conveniosState.set(valor);
+  }
   convenioSelecionado: ConvenioItem | null = null;
   modalConvenioAberto = false;
   modalExclusaoAberto = false;
@@ -91,16 +119,7 @@ export class ConveniosPage implements OnInit {
   }
 
   get conveniosFiltrados(): ConvenioItem[] {
-    const termo = (this.filtros['busca'] ?? '').trim().toLowerCase();
-    const ativo = (this.filtros['ativo'] ?? '').trim().toLowerCase();
-
-    return this.convenios.filter((convenio) => {
-      const passouBusca = !termo || convenio.nome.toLowerCase().includes(termo);
-      const status = convenio.ativo ? 'sim' : 'nao';
-      const passouAtivo = !ativo || status === ativo;
-
-      return passouBusca && passouAtivo;
-    });
+    return this.conveniosFiltradosSignal();
   }
 
   onFiltrosChange(filtros: Record<string, string>): void {

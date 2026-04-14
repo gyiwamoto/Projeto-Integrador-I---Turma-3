@@ -1,10 +1,11 @@
 <app-agenda-calendario [modoVisualizacao]="modoVisualizacao" [mesAtual]="mesAtual" [anoAtual]="anoAtual"
+  [consultasRenderToken]="consultas()" [carregando]="carregandoConsultas() || carregandoPacientes()"
   [mesSelecionadoEhAtual]="mesSelecionadoEhAtual" [diasExibidos]="diasExibidos" [diaSelecionado]="diaSelecionado"
-  [mesSelecionado]="mesSelecionado" [doutoraSelecionada]="doutoraSelecionada" [horas]="horas" [minutos]="minutos"
-  [nomeDiaSelecionado]="nomeDiaSelecionado" [consultaNoSlot]="consultaNoSlot"
+  [mesSelecionado]="mesSelecionado" [dentistas]="dentistas()" [dentistaSelecionadoId]="dentistaSelecionadoId()"
+  [horas]="horas" [minutos]="minutos" [nomeDiaSelecionado]="nomeDiaSelecionado" [consultaNoSlot]="consultaNoSlot"
   (modoVisualizacaoChange)="selecionarModoVisualizacao($event)" (periodoAnterior)="periodoAnterior()"
   (periodoProximo)="periodoProximo()" (diaSelecionadoChange)="selecionarDia($event.dia, $event.mes, $event.ano)"
-  (doutoraSelecionadaChange)="selecionarDoutora($event)" (slotClick)="clicarSlot($event.hora, $event.min)">
+  (dentistaSelecionadoChange)="selecionarDentista($event)" (slotClick)="clicarSlot($event.hora, $event.min)">
 </app-agenda-calendario>
 
 <app-modal [aberto]="modalAcaoAberto" titulo="O que deseja fazer?" descricao="Escolha a acao para o horario selecionado"
@@ -90,9 +91,37 @@
         <small>Agenda vinculada ao atendimento</small>
       </div>
     </div>
+
+    <div class="confirmacao-modal__procedimentos">
+      <span class="confirmacao-modal__rotulo">Procedimentos planejados</span>
+      <div class="procedimentos-dropdown">
+        <button type="button" class="procedimentos-trigger" (click)="alternarDropdownProcedimentos()"
+          [attr.aria-expanded]="procedimentosDropdownAberto">
+          <span class="procedimentos-trigger__texto">{{ procedimentosResumo }}</span>
+          <span class="procedimentos-trigger__icone" [class.aberto]="procedimentosDropdownAberto">⌄</span>
+        </button>
+
+        <div class="procedimentos-panel" *ngIf="procedimentosDropdownAberto">
+          <label class="procedimentos-opcao" *ngFor="let procedimento of procedimentos">
+            <input type="checkbox" [checked]="procedimentoSelecionado(procedimento.codigo)"
+              (change)="alternarProcedimento(procedimento.codigo)" />
+            <span class="procedimentos-opcao__conteudo">
+              <strong>{{ procedimento.nome }}</strong>
+              <small>{{ procedimento.tempoMinutos }} min</small>
+            </span>
+          </label>
+        </div>
+
+        <p class="procedimentos-ajuda">A Avaliação permanece como base quando nenhum outro procedimento estiver marcado.
+        </p>
+      </div>
+      <p class="duracao-estimada">Tempo estimado ocupado: <strong>{{ duracaoSelecionadaTexto }}</strong></p>
+    </div>
   </div>
   <div class="modal-actions">
-    <button class="btn-confirm" (click)="confirmarAgendamento()">Confirmar</button>
+    <button class="btn-confirm" (click)="confirmarAgendamento()" [disabled]="salvandoAgendamento">
+      Confirmar
+    </button>
     <button class="btn-cancel" (click)="fecharModalConfirmacao()">Cancelar</button>
   </div>
 </app-modal>

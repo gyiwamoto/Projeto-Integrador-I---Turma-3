@@ -7,6 +7,7 @@
   border: 1px solid rgba(20, 48, 74, 0.12);
   border-radius: 1rem;
   background: #ffffff;
+  min-width: 0;
 }
 
 .filtros__header h3 {
@@ -19,11 +20,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 0.8rem;
+  min-width: 0;
 }
 
 label {
   display: grid;
   gap: 0.3rem;
+  min-width: 0;
 
   span {
     font-size: 0.8rem;
@@ -34,6 +37,9 @@ label {
 
 input,
 select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border: 1px solid rgba(20, 48, 74, 0.15);
   border-radius: 0.7rem;
   padding: 0.55rem 0.7rem;
@@ -53,6 +59,7 @@ select {
   justify-content: flex-end;
   gap: 0.65rem;
   margin-top: 0.9rem;
+  flex-wrap: wrap;
 }
 
 .primary-action,
@@ -72,4 +79,19 @@ select {
 .secondary-action {
   background: rgba(31, 111, 141, 0.1);
   color: #17324d;
+}
+
+@media (max-width: 860px) {
+  .filtros__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filtros__actions {
+    justify-content: stretch;
+
+    .primary-action,
+    .secondary-action {
+      width: 100%;
+    }
+  }
 }

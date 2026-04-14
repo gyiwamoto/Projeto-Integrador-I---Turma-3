@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { PROCEDIMENTOS_FIXOS } from '../../constants/procedimentos';
 import { FiltroCampo, FiltrosComponent } from '../../components/filtros/filtros.component';
 import {
   TabelaColuna,
@@ -18,8 +20,8 @@ import { AuthService } from '../../services/auth.service';
 import { ConveniosService } from '../../services/convenios.service';
 import { ProcedimentosRealizadosService } from '../../services/procedimentos-realizados.service';
 import { ToastService } from '../../services/toast.service';
-import { TratamentoItem, TratamentosService } from '../../services/tratamentos.service';
-import { formatarData } from '../../utils/formatar-data';
+import { formatarData, formatarDataHora, formatarIntervaloDatas } from '../../utils/formatar-data';
+import { formatarStatusConsulta } from '../../utils/enums-status';
 
 interface ConsultaLinha extends TabelaLinha {
   id: string;
@@ -43,10 +45,10 @@ interface ConsultaLinha extends TabelaLinha {
 export class ConsultasComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
   private readonly agendaService = inject(AgendaService);
   private readonly authService = inject(AuthService);
   private readonly conveniosService = inject(ConveniosService);
-  private readonly tratamentosService = inject(TratamentosService);
   private readonly procedimentosRealizadosService = inject(ProcedimentosRealizadosService);
   private readonly toastService = inject(ToastService);
 
@@ -82,21 +84,81 @@ export class ConsultasComponent implements OnInit {
   carregando = false;
   carregandoProcedimentos = false;
   carregandoConvenios = false;
-  carregandoTratamentos = false;
   salvandoConsulta = false;
   salvandoProcedimento = false;
   excluindoConsulta = false;
   excluindoProcedimento = false;
 
-  linhas: ConsultaLinha[] = [];
-  linhasFiltradas: ConsultaLinha[] = [];
-  filtros: Record<string, string> = {};
-  consultas: AgendaConsulta[] = [];
-  convenios: ConvenioItem[] = [];
-  tratamentos: TratamentoItem[] = [];
+  private readonly linhasState = signal<ConsultaLinha[]>([]);
+  private readonly filtrosState = signal<Record<string, string>>({});
+  private readonly consultasState = signal<AgendaConsulta[]>([]);
+  private readonly conveniosState = signal<ConvenioItem[]>([]);
+  readonly procedimentosFixos = PROCEDIMENTOS_FIXOS;
   consultaSelecionada: AgendaConsulta | null = null;
   procedimentoSelecionado: ProcedimentoRealizadoItem | null = null;
-  procedimentosConsultaSelecionada: ProcedimentoRealizadoItem[] = [];
+  private readonly procedimentosConsultaSelecionadaState = signal<ProcedimentoRealizadoItem[]>([]);
+
+  readonly linhasFiltradasSignal = computed(() => {
+    const inicio = (this.filtrosState()['inicio'] ?? '').trim();
+    const fim = (this.filtrosState()['fim'] ?? '').trim();
+    const paciente = (this.filtrosState()['paciente'] ?? '').trim().toLowerCase();
+
+    return this.linhasState().filter((linha) => {
+      const dataLinha = formatarData(linha.dataConsulta, 'input');
+      const passouInicio = !inicio || dataLinha >= inicio;
+      const passouFim = !fim || dataLinha <= fim;
+      const alvoPaciente = [linha.pacienteNome, linha.codigoPaciente, linha.numeroCarteirinha]
+        .join(' ')
+        .toLowerCase();
+      const passouPaciente = !paciente || alvoPaciente.includes(paciente);
+      return passouInicio && passouFim && passouPaciente;
+    });
+  });
+
+  // ===== Accessors para Signals =====
+  get linhas(): ConsultaLinha[] {
+    return this.linhasState();
+  }
+
+  private set linhas(valor: ConsultaLinha[]) {
+    this.linhasState.set(valor);
+  }
+
+  get linhasFiltradas(): ConsultaLinha[] {
+    return this.linhasFiltradasSignal();
+  }
+
+  get filtros(): Record<string, string> {
+    return this.filtrosState();
+  }
+
+  set filtros(valor: Record<string, string>) {
+    this.filtrosState.set(valor);
+  }
+
+  get consultas(): AgendaConsulta[] {
+    return this.consultasState();
+  }
+
+  set consultas(valor: AgendaConsulta[]) {
+    this.consultasState.set(valor);
+  }
+
+  get convenios(): ConvenioItem[] {
+    return this.conveniosState();
+  }
+
+  set convenios(valor: ConvenioItem[]) {
+    this.conveniosState.set(valor);
+  }
+
+  get procedimentosConsultaSelecionada(): ProcedimentoRealizadoItem[] {
+    return this.procedimentosConsultaSelecionadaState();
+  }
+
+  set procedimentosConsultaSelecionada(valor: ProcedimentoRealizadoItem[]) {
+    this.procedimentosConsultaSelecionadaState.set(valor);
+  }
 
   readonly formConsulta = this.fb.group({
     dataConsulta: ['', [Validators.required]],
@@ -160,22 +222,51 @@ export class ConsultasComponent implements OnInit {
     return this.procedimentosConsultaSelecionada as unknown as TabelaLinha[];
   }
 
+  get podeAlterarAgendamento(): boolean {
+    return this.consultaSelecionada?.status === 'agendado';
+  }
+
+  formatarDataConsulta(valor: string): string {
+    return formatarDataHora(valor);
+  }
+
   ngOnInit(): void {
-    this.carregarDados();
+    const intervaloInicial = this.obterIntervaloInicialSemanaOperacional();
+    this.filtros = {
+      ...(this.filtros ?? {}),
+      inicio: intervaloInicial.inicioInput,
+      fim: intervaloInicial.fimInput,
+    };
+
+    this.carregarDados({
+      dataInicio: intervaloInicial.dataInicio,
+      dataFim: intervaloInicial.dataFim,
+    });
     this.carregarConvenios();
-    this.carregarTratamentos();
   }
 
   onFiltrosChange(filtros: Record<string, string>): void {
+    const intervaloAnterior = this.extrairIntervaloDosFiltros(this.filtrosState());
+
     this.filtros = filtros;
-    this.aplicarFiltros();
+
+    const intervaloAtual = this.extrairIntervaloDosFiltros(filtros);
+    const mudouIntervalo =
+      intervaloAnterior.dataInicio !== intervaloAtual.dataInicio ||
+      intervaloAnterior.dataFim !== intervaloAtual.dataFim;
+
+    if (mudouIntervalo) {
+      this.carregarDados(
+        intervaloAtual.dataInicio || intervaloAtual.dataFim ? intervaloAtual : undefined,
+      );
+    }
   }
 
   selecionarConsulta(consulta: AgendaConsulta): void {
     this.consultaSelecionada = consulta;
     this.procedimentoSelecionado = null;
     this.formConsulta.reset({
-      dataConsulta: this.converterIsoParaDateTimeLocal(consulta.dataConsulta),
+      dataConsulta: formatarDataHora(consulta.dataConsulta, 'input'),
       status: consulta.status,
       numeroCarteirinha: consulta.numeroCarteirinha ?? '',
       convenioId: consulta.convenioId ?? '',
@@ -218,7 +309,7 @@ export class ConsultasComponent implements OnInit {
       tratamentoId: procedimento.tratamentoId,
       dente: procedimento.dente != null ? String(procedimento.dente) : '11',
       face: procedimento.face ?? 'V',
-      dataProcedimento: this.converterIsoParaDateTimeLocal(procedimento.dataProcedimento),
+      dataProcedimento: formatarDataHora(procedimento.dataProcedimento, 'input'),
       observacoes: procedimento.observacoes ?? '',
     });
   }
@@ -241,8 +332,8 @@ export class ConsultasComponent implements OnInit {
     }
 
     const valor = this.formConsulta.getRawValue();
-    const dataConsultaIso = this.converterDateTimeLocalParaIso(valor.dataConsulta ?? '');
-    if (!dataConsultaIso) {
+    const dataConsultaBr = formatarDataHora(valor.dataConsulta ?? '', 'backend');
+    if (!dataConsultaBr) {
       this.toastService.erro('Data da consulta invalida.');
       return;
     }
@@ -251,7 +342,7 @@ export class ConsultasComponent implements OnInit {
     this.agendaService
       .atualizarConsulta(this.consultaSelecionada.id, {
         status: (valor.status as AgendaConsulta['status']) ?? 'agendado',
-        dataConsulta: dataConsultaIso,
+        dataConsulta: dataConsultaBr,
         numeroCarteirinha: (valor.numeroCarteirinha ?? '').trim(),
         convenioId: (valor.convenioId ?? '').trim() || undefined,
         observacoes: (valor.observacoes ?? '').trim(),
@@ -268,6 +359,25 @@ export class ConsultasComponent implements OnInit {
           this.cdr.markForCheck();
         },
       });
+  }
+
+  alterarAgendamento(): void {
+    if (!this.consultaSelecionada || !this.podeAlterarAgendamento) {
+      return;
+    }
+
+    void this.router.navigate(['/dashboard/agendar-consulta'], {
+      queryParams: {
+        consultaId: this.consultaSelecionada.id,
+        pacienteId: this.consultaSelecionada.pacienteId,
+        pacienteCodigo: this.consultaSelecionada.codigoPaciente ?? '',
+        pacienteNome: this.consultaSelecionada.pacienteNome,
+        usuarioId: this.consultaSelecionada.usuarioId,
+        dataConsulta: this.consultaSelecionada.dataConsulta,
+        profissionalNome: this.consultaSelecionada.profissionalNome,
+        procedimentosAgendados: (this.consultaSelecionada.procedimentosAgendados ?? []).join(','),
+      },
+    });
   }
 
   excluirConsulta(): void {
@@ -311,8 +421,8 @@ export class ConsultasComponent implements OnInit {
       dente: Number(valor.dente),
       face: (valor.face ?? '').toUpperCase(),
       dataProcedimento:
-        this.converterDateTimeLocalParaIso(valor.dataProcedimento ?? '') ??
-        this.obterDataAtualIso(),
+        formatarDataHora(valor.dataProcedimento ?? '', 'backend') ||
+        formatarDataHora(new Date(), 'backend'),
       observacoes: (valor.observacoes ?? '').trim(),
     };
 
@@ -382,13 +492,13 @@ export class ConsultasComponent implements OnInit {
     });
   }
 
-  private carregarDados(): void {
+  private carregarDados(intervalo?: { dataInicio?: string; dataFim?: string }): void {
     this.carregando = true;
-    this.agendaService.listarConsultas().subscribe({
+    this.agendaService.listarConsultas(false, 'geral', intervalo).subscribe({
       next: (consultas) => {
         this.consultas = consultas ?? [];
         this.linhas = this.montarLinhas(this.consultas);
-        this.aplicarFiltros();
+
         this.carregando = false;
         this.cdr.markForCheck();
       },
@@ -401,9 +511,8 @@ export class ConsultasComponent implements OnInit {
   }
 
   private sincronizarConsultasComCache(): void {
-    this.consultas = this.agendaService.obterConsultasEmCache('geral');
+    this.consultas = this.agendaService.obterConsultasEmCache();
     this.linhas = this.montarLinhas(this.consultas);
-    this.aplicarFiltros();
     this.cdr.markForCheck();
   }
 
@@ -418,22 +527,6 @@ export class ConsultasComponent implements OnInit {
       error: () => {
         this.convenios = [];
         this.carregandoConvenios = false;
-        this.cdr.markForCheck();
-      },
-    });
-  }
-
-  private carregarTratamentos(): void {
-    this.carregandoTratamentos = true;
-    this.tratamentosService.listarTratamentos().subscribe({
-      next: (resposta) => {
-        this.tratamentos = resposta.tratamentos ?? [];
-        this.carregandoTratamentos = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.tratamentos = [];
-        this.carregandoTratamentos = false;
         this.cdr.markForCheck();
       },
     });
@@ -472,79 +565,59 @@ export class ConsultasComponent implements OnInit {
       convenioNome: consulta.convenioNome ?? '-',
       numeroCarteirinha: consulta.numeroCarteirinha ?? '-',
       profissionalNome: consulta.profissionalNome,
-      status: this.formatarStatus(consulta.status),
+      status: formatarStatusConsulta(consulta.status),
       observacoes: consulta.observacoes ?? '',
     }));
   }
 
-  private aplicarFiltros(): void {
-    const inicio = (this.filtros['inicio'] ?? '').trim();
-    const fim = (this.filtros['fim'] ?? '').trim();
-    const paciente = (this.filtros['paciente'] ?? '').trim().toLowerCase();
+  private obterIntervaloInicialSemanaOperacional(): {
+    dataInicio: string;
+    dataFim: string;
+    inicioInput: string;
+    fimInput: string;
+  } {
+    const hoje = new Date();
+    const inicio = new Date(hoje);
+    inicio.setDate(inicio.getDate() - 1);
 
-    this.linhasFiltradas = this.linhas.filter((linha) => {
-      const dataLinha = this.apenasData(linha.dataConsulta);
-      const passouInicio = !inicio || dataLinha >= inicio;
-      const passouFim = !fim || dataLinha <= fim;
-      const alvoPaciente = [linha.pacienteNome, linha.codigoPaciente, linha.numeroCarteirinha]
-        .join(' ')
-        .toLowerCase();
-      const passouPaciente = !paciente || alvoPaciente.includes(paciente);
-      return passouInicio && passouFim && passouPaciente;
-    });
+    const fim = new Date(hoje);
+    fim.setDate(fim.getDate() + 6);
+
+    return {
+      ...formatarIntervaloDatas(inicio, fim, 'backend'),
+      inicioInput: formatarData(inicio, 'input'),
+      fimInput: formatarData(fim, 'input'),
+    };
   }
 
-  private formatarStatus(status: AgendaConsulta['status']): string {
-    if (status === 'agendado') {
-      return 'Agendado';
-    }
+  private extrairIntervaloDosFiltros(filtros: Record<string, string>): {
+    dataInicio?: string;
+    dataFim?: string;
+  } {
+    const dataInicio = (filtros['inicio'] ?? '').trim();
+    const dataFim = (filtros['fim'] ?? '').trim();
 
-    if (status === 'realizado') {
-      return 'Realizado';
-    }
+    const converterInputParaChave = (valor: string): string | undefined => {
+      if (!valor) {
+        return undefined;
+      }
 
-    return 'Cancelado';
-  }
+      const partes = valor.split('-');
+      if (partes.length !== 3) {
+        return undefined;
+      }
 
-  private apenasData(valor: string): string {
-    const data = new Date(valor);
-    if (Number.isNaN(data.getTime())) {
-      return '';
-    }
+      const [ano, mes, dia] = partes;
+      if (!ano || !mes || !dia) {
+        return undefined;
+      }
 
-    return data.toISOString().slice(0, 10);
-  }
+      return `${dia}-${mes}-${ano}`;
+    };
 
-  private converterIsoParaDateTimeLocal(valor: string): string {
-    const data = new Date(valor);
-    if (Number.isNaN(data.getTime())) {
-      return '';
-    }
-
-    const ano = data.getFullYear();
-    const mes = String(data.getMonth() + 1).padStart(2, '0');
-    const dia = String(data.getDate()).padStart(2, '0');
-    const hora = String(data.getHours()).padStart(2, '0');
-    const minuto = String(data.getMinutes()).padStart(2, '0');
-
-    return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
-  }
-
-  private converterDateTimeLocalParaIso(valor: string): string | null {
-    const texto = valor.trim();
-    if (!texto) {
-      return null;
-    }
-
-    const data = new Date(texto);
-    if (Number.isNaN(data.getTime())) {
-      return null;
-    }
-
-    return data.toISOString();
-  }
-
-  private obterDataAtualIso(): string {
-    return new Date().toISOString();
+    return {
+      dataInicio: dataInicio ? formatarData(dataInicio, 'backend') : undefined,
+      dataFim: dataFim ? formatarData(dataFim, 'backend') : undefined,
+    };
   }
 }

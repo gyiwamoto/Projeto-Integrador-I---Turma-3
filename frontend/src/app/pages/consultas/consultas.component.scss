@@ -37,7 +37,7 @@
 
 .consultas-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -66,13 +66,32 @@
   display: grid;
   gap: 1rem;
   min-height: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: #f8fbff;
+  padding: clamp(1rem, 2.5vw, 2rem);
 }
 
-.consultas-detalhe__header {
+.consultas-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: rgba(10, 23, 38, 0.62);
+}
+
+.consultas-modal {
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+}
+
+.consultas-detalhe__intro {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
+  min-width: 0;
 
   h2,
   h3 {
@@ -84,6 +103,20 @@
     margin: 0.35rem 0 0;
     color: #5f7488;
   }
+}
+
+.consultas-detalhe__intro-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.consultas-modal__close {
+  padding-inline: 1.1rem;
+  background: rgba(187, 62, 62, 0.14);
+  color: #972b2b;
 }
 
 .status-chip {
@@ -147,12 +180,30 @@
   gap: 0.9rem;
 }
 
+.consulta-form__agendamento {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+
+  input {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
+
+  .secondary-action {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
 label {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   color: #17324d;
   font-weight: 600;
+  min-width: 0;
 
   span {
     font-size: 0.85rem;
@@ -221,5 +272,45 @@ label {
   p {
     margin: 0;
     color: #5f7488;
+  }
+}
+
+@media (max-width: 860px) {
+  .consulta-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .consultas-detalhe__intro {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .consultas-detalhe__intro-actions {
+    width: 100%;
+    justify-content: stretch;
+
+    .status-chip,
+    .consultas-modal__close {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .consulta-form__agendamento {
+    flex-direction: column;
+    align-items: stretch;
+
+    .secondary-action {
+      width: 100%;
+    }
+  }
+
+  .consulta-form__actions {
+    justify-content: stretch;
+
+    .primary-action,
+    .secondary-action {
+      width: 100%;
+    }
   }
 }

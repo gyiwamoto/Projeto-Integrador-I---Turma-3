@@ -2,10 +2,13 @@
   "name": "dentista-organizado-workspace",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "install-all": "npm install --ignore-scripts && npm --prefix api install --ignore-scripts && npm --prefix database install --ignore-scripts && npm --prefix frontend install --ignore-scripts",
     "dev": "npx concurrently -k -n API,WEB -c yellow,cyan \"npm run dev:api\" \"npm run dev:web\"",
-    "dev:api": "npx dotenv -e .env.development -- npx vercel dev --cwd api --yes --listen 3000",
+    "dev:api": "dotenv -e .env.development -- vercel dev --cwd api --yes --listen 3000",
     "dev:web": "npm --prefix frontend run start:proxy -- --port 4200",
     "type-check": "npm run type-check --prefix api && npm run type-check --prefix frontend"
   },

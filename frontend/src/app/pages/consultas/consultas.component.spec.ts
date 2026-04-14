@@ -36,7 +36,6 @@ describe('ConsultasComponent', () => {
   it('carrega dados no ngOnInit', () => {
     component.ngOnInit();
     expect(agendaServiceSpy.listarConsultas).toHaveBeenCalled();
-    expect(agendaServiceSpy.listarPacientes).toHaveBeenCalled();
   });
 
   it('atualiza filtros no onFiltrosChange', () => {

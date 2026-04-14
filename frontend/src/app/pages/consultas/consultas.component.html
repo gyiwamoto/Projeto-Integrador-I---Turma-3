@@ -14,7 +14,7 @@
         <p>Selecione uma consulta para visualizar e editar seus detalhes.</p>
       </div>
 
-      <app-filtros [titulo]="'Filtrar consultas'" [campos]="camposFiltro"
+      <app-filtros [titulo]="'Filtrar consultas'" [campos]="camposFiltro" [valoresIniciais]="filtros"
         (filtrosChange)="onFiltrosChange($event)"></app-filtros>
 
       <app-tabela [colunas]="colunas" [linhas]="linhasConsultas"
@@ -23,191 +23,202 @@
         [rotuloEditar]="consultaSelecionada ? 'Cancelar selecao' : 'Selecionar'" [acaoEditar]="acaoSelecionarConsulta"
         [mostrarColunaExcluir]="false"></app-tabela>
     </section>
-
-    <aside class="consultas-detalhe">
-      @if (consultaSelecionada) {
-      <header class="consultas-detalhe__header">
-        <div>
-          <span class="section-label">Consulta selecionada</span>
-          <h2>{{ consultaSelecionada.pacienteNome }}</h2>
-          <p>{{ consultaSelecionada.profissionalNome }} · {{ consultaSelecionada.dataConsulta | date:'dd/MM/yyyy HH:mm'
-            }}</p>
-        </div>
-
-        <span class="status-chip" [class.status-chip--done]="consultaSelecionada.status === 'realizado'"
-          [class.status-chip--cancelled]="consultaSelecionada.status === 'cancelado'">
-          {{ consultaSelecionada.status | titlecase }}
-        </span>
-      </header>
-
-      <div class="consulta-meta">
-        <p><strong>Codigo da carteirinha:</strong> {{ consultaSelecionada.numeroCarteirinha ?? '-' }}</p>
-        <p><strong>Convenio:</strong> {{ consultaSelecionada.convenioNome ?? '-' }}</p>
-        <p><strong>Observacoes:</strong> {{ consultaSelecionada.observacoes ?? 'Sem observacoes registradas.' }}</p>
-      </div>
-
-      <section class="consultas-bloco">
-        <div class="consultas-bloco__header">
-          <div>
-            <span class="section-label">Editar consulta</span>
-            <h3>Atualize os detalhes</h3>
-          </div>
-        </div>
-
-        <form class="consulta-form" [formGroup]="formConsulta">
-          <div class="consulta-form__grid">
-            <label>
-              <span>Paciente</span>
-              <input type="text" [value]="consultaSelecionada.pacienteNome" readonly />
-            </label>
-
-            <label>
-              <span>Profissional</span>
-              <input type="text" [value]="consultaSelecionada.profissionalNome" readonly />
-            </label>
-
-            <label>
-              <span>Data da consulta</span>
-              <input type="datetime-local" formControlName="dataConsulta" />
-            </label>
-
-            <label>
-              <span>Status</span>
-              <select formControlName="status">
-                <option value="agendado">Agendado</option>
-                <option value="realizado">Realizado</option>
-                <option value="cancelado">Cancelado</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Codigo do paciente</span>
-              <input type="text" [value]="consultaSelecionada.codigoPaciente ?? '-'" readonly />
-            </label>
-
-            <label>
-              <span>Carteirinha</span>
-              <input type="text" formControlName="numeroCarteirinha" />
-            </label>
-          </div>
-
-          <label>
-            <span>Convenio</span>
-            <select formControlName="convenioId">
-              <option value="">Particular</option>
-              @for (convenio of convenios; track convenio.cnpj) {
-              <option [value]="convenio.cnpj">{{ convenio.nome }}</option>
-              }
-            </select>
-          </label>
-
-          <label>
-            <span>Observacoes</span>
-            <textarea rows="3" formControlName="observacoes"></textarea>
-          </label>
-
-          <div class="consulta-form__actions">
-            <button type="button" class="secondary-action" [disabled]="salvandoConsulta"
-              (click)="deseleccionarConsulta()">Cancelar</button>
-            <button type="button" class="secondary-action" *ngIf="ehAdmin" [disabled]="excluindoConsulta"
-              (click)="excluirConsulta()">
-              {{ excluindoConsulta ? 'Excluindo...' : 'Excluir' }}
-            </button>
-            <button type="button" class="primary-action" [disabled]="formConsulta.invalid || salvandoConsulta"
-              (click)="salvarConsulta()">
-              {{ salvandoConsulta ? 'Salvando...' : 'Salvar alteracoes' }}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section class="consultas-bloco">
-        <div class="consultas-bloco__header">
-          <div>
-            <span class="section-label">Procedimentos</span>
-            <h3>Registrados nesta consulta</h3>
-          </div>
-        </div>
-
-        <app-tabela [colunas]="colunasProcedimentos" [linhas]="procedimentosSelecionados"
-          mensagemSemDados="Nenhum procedimento registrado nesta consulta." [carregando]="carregandoProcedimentos"
-          mensagemCarregando="Carregando procedimentos..." rotuloEditar="Editar" [acaoEditar]="acaoEditarProcedimento"
-          [mostrarColunaExcluir]="true" rotuloExcluir="Excluir" [acaoExcluir]="acaoExcluirProcedimento"
-          [excluirDesabilitado]="excluirDesabilitadoProcedimento"></app-tabela>
-      </section>
-
-      <section class="consultas-bloco" *ngIf="procedimentoSelecionado">
-        <div class="consultas-bloco__header">
-          <div>
-            <span class="section-label">Editar procedimento</span>
-            <h3>Altere os dados do procedimento</h3>
-          </div>
-        </div>
-
-        <form class="consulta-form" [formGroup]="formProcedimento">
-          <div class="consulta-form__grid">
-            <label>
-              <span>Tratamento</span>
-              <select formControlName="tratamentoId">
-                <option value="">Selecione</option>
-                @for (tratamento of tratamentos; track tratamento.id) {
-                <option [value]="tratamento.id">{{ tratamento.nome }}</option>
-                }
-              </select>
-            </label>
-
-            <label>
-              <span>Dente</span>
-              <select formControlName="dente">
-                @for (dente of [11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33, 34, 35, 36,
-                37, 38, 41, 42, 43, 44, 45, 46, 47, 48]; track dente) {
-                <option [value]="dente">{{ dente }}</option>
-                }
-              </select>
-            </label>
-
-            <label>
-              <span>Face</span>
-              <select formControlName="face">
-                <option value="V">V</option>
-                <option value="P">P</option>
-                <option value="M">M</option>
-                <option value="D">D</option>
-                <option value="L">L</option>
-                <option value="O">O</option>
-                <option value="I">I</option>
-              </select>
-            </label>
-
-            <label>
-              <span>Data do procedimento</span>
-              <input type="datetime-local" formControlName="dataProcedimento" />
-            </label>
-          </div>
-
-          <label>
-            <span>Observacoes</span>
-            <textarea rows="3" formControlName="observacoes"></textarea>
-          </label>
-
-          <div class="consulta-form__actions">
-            <button type="button" class="secondary-action" [disabled]="salvandoProcedimento"
-              (click)="cancelarEdicaoProcedimento()">Cancelar</button>
-            <button type="button" class="primary-action" [disabled]="formProcedimento.invalid || salvandoProcedimento"
-              (click)="salvarProcedimento()">
-              {{ salvandoProcedimento ? 'Salvando...' : (procedimentoSelecionado ? 'Salvar alteracoes' : 'Salvar
-              procedimento') }}
-            </button>
-          </div>
-        </form>
-      </section>
-      } @else {
-      <div class="consultas-vazio">
-        <span class="material-symbols-outlined" aria-hidden="true">event_note</span>
-        <h2>Selecione uma consulta</h2>
-        <p>Use a tabela ao lado para abrir os detalhes da consulta que deseja visualizar ou editar.</p>
-      </div>
-      }
-    </aside>
   </div>
+
+  @if (consultaSelecionada) {
+  <div class="consultas-modal-backdrop" role="presentation" (click)="deseleccionarConsulta()">
+    <section class="consultas-modal" role="dialog" aria-modal="true" aria-label="Detalhes da consulta"
+      (click)="$event.stopPropagation()">
+      <aside class="consultas-detalhe">
+        <section class="consultas-detalhe__intro" aria-label="Resumo da consulta selecionada">
+          <div>
+            <span class="section-label">Consulta selecionada</span>
+            <h2>{{ consultaSelecionada.pacienteNome }}</h2>
+            <p>{{ consultaSelecionada.profissionalNome }} · {{ formatarDataConsulta(consultaSelecionada.dataConsulta) }}
+            </p>
+          </div>
+
+          <div class="consultas-detalhe__intro-actions">
+            <span class="status-chip" [class.status-chip--done]="consultaSelecionada.status === 'realizado'"
+              [class.status-chip--cancelled]="consultaSelecionada.status === 'cancelado'">
+              {{ consultaSelecionada.status | titlecase }}
+            </span>
+            <button type="button" class="secondary-action consultas-modal__close" (click)="deseleccionarConsulta()">
+              Fechar
+            </button>
+          </div>
+        </section>
+
+        <div class="consulta-meta">
+          <p><strong>Codigo da carteirinha:</strong> {{ consultaSelecionada.numeroCarteirinha ?? '-' }}</p>
+          <p><strong>Convenio:</strong> {{ consultaSelecionada.convenioNome ?? '-' }}</p>
+          <p><strong>Observacoes:</strong> {{ consultaSelecionada.observacoes ?? 'Sem observacoes registradas.' }}</p>
+        </div>
+
+        <section class="consultas-bloco">
+          <div class="consultas-bloco__header">
+            <div>
+              <span class="section-label">Editar consulta</span>
+              <h3>Atualize os detalhes</h3>
+            </div>
+          </div>
+
+          <form class="consulta-form" [formGroup]="formConsulta">
+            <div class="consulta-form__grid">
+              <label>
+                <span>Paciente</span>
+                <input type="text" [value]="consultaSelecionada.pacienteNome" readonly />
+              </label>
+
+              <label>
+                <span>Profissional</span>
+                <input type="text" [value]="consultaSelecionada.profissionalNome" readonly />
+              </label>
+
+              <label>
+                <span>Data da consulta</span>
+                <div class="consulta-form__agendamento">
+                  <input type="text" [value]="formatarDataConsulta(consultaSelecionada.dataConsulta)" readonly />
+                  <button type="button" class="secondary-action" [disabled]="!podeAlterarAgendamento"
+                    (click)="alterarAgendamento()">
+                    Alterar agendamento
+                  </button>
+                </div>
+              </label>
+
+              <label>
+                <span>Status</span>
+                <select formControlName="status">
+                  <option value="agendado">Agendado</option>
+                  <option value="realizado">Realizado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Codigo do paciente</span>
+                <input type="text" [value]="consultaSelecionada.codigoPaciente ?? '-'" readonly />
+              </label>
+
+              <label>
+                <span>Carteirinha</span>
+                <input type="text" formControlName="numeroCarteirinha" />
+              </label>
+            </div>
+
+            <label>
+              <span>Convenio</span>
+              <select formControlName="convenioId">
+                <option value="">Particular</option>
+                @for (convenio of convenios; track convenio.cnpj) {
+                <option [value]="convenio.cnpj">{{ convenio.nome }}</option>
+                }
+              </select>
+            </label>
+
+            <label>
+              <span>Observacoes</span>
+              <textarea rows="3" formControlName="observacoes"></textarea>
+            </label>
+
+            <div class="consulta-form__actions">
+              <button type="button" class="secondary-action" [disabled]="salvandoConsulta"
+                (click)="deseleccionarConsulta()">Cancelar</button>
+              <button type="button" class="secondary-action" *ngIf="ehAdmin" [disabled]="excluindoConsulta"
+                (click)="excluirConsulta()">
+                {{ excluindoConsulta ? 'Excluindo...' : 'Excluir' }}
+              </button>
+              <button type="button" class="primary-action" [disabled]="formConsulta.invalid || salvandoConsulta"
+                (click)="salvarConsulta()">
+                {{ salvandoConsulta ? 'Salvando...' : 'Salvar alteracoes' }}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="consultas-bloco">
+          <div class="consultas-bloco__header">
+            <div>
+              <span class="section-label">Procedimentos</span>
+              <h3>Registrados nesta consulta</h3>
+            </div>
+          </div>
+
+          <app-tabela [colunas]="colunasProcedimentos" [linhas]="procedimentosSelecionados"
+            mensagemSemDados="Nenhum procedimento registrado nesta consulta." [carregando]="carregandoProcedimentos"
+            mensagemCarregando="Carregando procedimentos..." rotuloEditar="Editar" [acaoEditar]="acaoEditarProcedimento"
+            [mostrarColunaExcluir]="true" rotuloExcluir="Excluir" [acaoExcluir]="acaoExcluirProcedimento"
+            [excluirDesabilitado]="excluirDesabilitadoProcedimento"></app-tabela>
+        </section>
+
+        <section class="consultas-bloco" *ngIf="procedimentoSelecionado">
+          <div class="consultas-bloco__header">
+            <div>
+              <span class="section-label">Editar procedimento</span>
+              <h3>Altere os dados do procedimento</h3>
+            </div>
+          </div>
+
+          <form class="consulta-form" [formGroup]="formProcedimento">
+            <div class="consulta-form__grid">
+              <label>
+                <span>Tratamento</span>
+                <select formControlName="tratamentoId">
+                  <option value="">Selecione</option>
+                  @for (procedimento of procedimentosFixos; track procedimento.codigo) {
+                  <option [value]="procedimento.codigo">{{ procedimento.nome }}</option>
+                  }
+                </select>
+              </label>
+
+              <label>
+                <span>Dente</span>
+                <select formControlName="dente">
+                  @for (dente of [11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33, 34, 35,
+                  36,
+                  37, 38, 41, 42, 43, 44, 45, 46, 47, 48]; track dente) {
+                  <option [value]="dente">{{ dente }}</option>
+                  }
+                </select>
+              </label>
+
+              <label>
+                <span>Face</span>
+                <select formControlName="face">
+                  <option value="V">V</option>
+                  <option value="P">P</option>
+                  <option value="M">M</option>
+                  <option value="D">D</option>
+                  <option value="L">L</option>
+                  <option value="O">O</option>
+                  <option value="I">I</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Data do procedimento</span>
+                <input type="datetime-local" formControlName="dataProcedimento" />
+              </label>
+            </div>
+
+            <label>
+              <span>Observacoes</span>
+              <textarea rows="3" formControlName="observacoes"></textarea>
+            </label>
+
+            <div class="consulta-form__actions">
+              <button type="button" class="secondary-action" [disabled]="salvandoProcedimento"
+                (click)="cancelarEdicaoProcedimento()">Cancelar</button>
+              <button type="button" class="primary-action" [disabled]="formProcedimento.invalid || salvandoProcedimento"
+                (click)="salvarProcedimento()">
+                {{ salvandoProcedimento ? 'Salvando...' : (procedimentoSelecionado ? 'Salvar alteracoes' : 'Salvar
+                procedimento') }}
+              </button>
+            </div>
+          </form>
+        </section>
+      </aside>
+    </section>
+  </div>
+  }
 </section>

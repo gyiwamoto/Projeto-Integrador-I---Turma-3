@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AgendaCalendarioComponent, DiaAgenda, AgendaSlot } from './agenda-calendario.component';
+import {
+  AgendaCalendarioComponent,
+  AgendaDentista,
+  AgendaSlot,
+  DiaAgenda,
+} from './agenda-calendario.component';
 
 describe('AgendaCalendarioComponent', () => {
   let fixture: ComponentFixture<AgendaCalendarioComponent>;
@@ -24,6 +29,12 @@ describe('AgendaCalendarioComponent', () => {
     component.diasExibidos = diasTesteMock;
     component.horas = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
     component.minutos = [0, 15, 30, 45];
+    const dentistasTeste: AgendaDentista[] = [
+      { id: 'dentista-1', nome: 'Dra. Beatriz' },
+      { id: 'dentista-2', nome: 'Dr. Luciana' },
+    ];
+    component.dentistas = dentistasTeste;
+    component.dentistaSelecionadoId = dentistasTeste[0]?.id ?? '';
   });
 
   describe('Inicialização', () => {
@@ -36,8 +47,8 @@ describe('AgendaCalendarioComponent', () => {
       expect(component.modoVisualizacao).toBe('semana');
     });
 
-    it('inicializa com beatriz como doutora selecionada', () => {
-      expect(component.doutoraSelecionada).toBe('beatriz');
+    it('inicializa sem dentista selecionado por genero', () => {
+      expect(component.dentistaSelecionadoId).toBe('dentista-1');
     });
 
     it('inicializa com arrays vazios quando nao fornecido', () => {
@@ -211,30 +222,30 @@ describe('AgendaCalendarioComponent', () => {
     });
   });
 
-  describe('Selecao de Doutora', () => {
-    it('emite evento ao selecionar beatriz', () => {
-      let doutaraEmitida: 'beatriz' | 'luciana' | null = null;
-      component.doutoraSelecionadaChange.subscribe((doutora) => {
-        doutaraEmitida = doutora;
+  describe('Selecao de Dentista', () => {
+    it('emite evento ao selecionar o primeiro dentista', () => {
+      let dentistaEmitido: string | null = null;
+      component.dentistaSelecionadoChange.subscribe((dentistaId) => {
+        dentistaEmitido = dentistaId;
       });
-      component.selecionarDoutora('beatriz');
-      expect(doutaraEmitida).toBe('beatriz');
+      component.selecionarDentista('dentista-1');
+      expect(dentistaEmitido).toBe('dentista-1');
     });
 
-    it('emite evento ao selecionar luciana', () => {
-      let doutaraEmitida: 'beatriz' | 'luciana' | null = null;
-      component.doutoraSelecionadaChange.subscribe((doutora) => {
-        doutaraEmitida = doutora;
+    it('emite evento ao selecionar o segundo dentista', () => {
+      let dentistaEmitido: string | null = null;
+      component.dentistaSelecionadoChange.subscribe((dentistaId) => {
+        dentistaEmitido = dentistaId;
       });
-      component.selecionarDoutora('luciana');
-      expect(doutaraEmitida).toBe('luciana');
+      component.selecionarDentista('dentista-2');
+      expect(dentistaEmitido).toBe('dentista-2');
     });
 
-    it('atualiza doutora selecionada quando propriedade muda', () => {
-      component.doutoraSelecionada = 'beatriz';
-      expect(component.doutoraSelecionada).toBe('beatriz');
-      component.doutoraSelecionada = 'luciana';
-      expect(component.doutoraSelecionada).toBe('luciana');
+    it('atualiza dentista selecionado quando propriedade muda', () => {
+      component.dentistaSelecionadoId = 'dentista-1';
+      expect(component.dentistaSelecionadoId).toBe('dentista-1');
+      component.dentistaSelecionadoId = 'dentista-2';
+      expect(component.dentistaSelecionadoId).toBe('dentista-2');
     });
   });
 
@@ -364,12 +375,12 @@ describe('AgendaCalendarioComponent', () => {
       component.modoVisualizacao = 'mes';
       component.mesAtual = 'Fevereiro';
       component.anoAtual = 2024;
-      component.doutoraSelecionada = 'luciana';
+      component.dentistaSelecionadoId = 'dentista-2';
       fixture.detectChanges();
       expect(component.modoVisualizacao).toBe('mes');
       expect(component.mesAtual).toBe('Fevereiro');
       expect(component.anoAtual).toBe(2024);
-      expect(component.doutoraSelecionada).toBe('luciana');
+      expect(component.dentistaSelecionadoId).toBe('dentista-2');
     });
 
     it('atualiza mes selecionado', () => {
@@ -402,7 +413,7 @@ describe('AgendaCalendarioComponent', () => {
         modoVisualizacao: false,
         periodo: false,
         dia: false,
-        doutora: false,
+        dentista: false,
         slot: false,
       };
 
@@ -415,8 +426,8 @@ describe('AgendaCalendarioComponent', () => {
       component.diaSelecionadoChange.subscribe(() => {
         eventos.dia = true;
       });
-      component.doutoraSelecionadaChange.subscribe(() => {
-        eventos.doutora = true;
+      component.dentistaSelecionadoChange.subscribe(() => {
+        eventos.dentista = true;
       });
       component.slotClick.subscribe(() => {
         eventos.slot = true;
@@ -425,13 +436,13 @@ describe('AgendaCalendarioComponent', () => {
       component.selecionarModoVisualizacao('mes');
       component.navegarAnterior();
       component.selecionarDia(diaFuturo);
-      component.selecionarDoutora('luciana');
+      component.selecionarDentista('dentista-2');
       component.clicarSlot(10, 0);
 
       expect(eventos.modoVisualizacao).toBe(true);
       expect(eventos.periodo).toBe(true);
       expect(eventos.dia).toBe(true);
-      expect(eventos.doutora).toBe(true);
+      expect(eventos.dentista).toBe(true);
       expect(eventos.slot).toBe(true);
     });
   });

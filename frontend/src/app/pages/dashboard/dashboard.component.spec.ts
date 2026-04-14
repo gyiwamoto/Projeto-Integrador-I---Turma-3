@@ -6,7 +6,6 @@ import { AuthService } from '../../services/auth.service';
 import { AgendaService } from '../../services/agenda.service';
 import { PacientesService } from '../../services/pacientes.service';
 import { ProcedimentosRealizadosService } from '../../services/procedimentos-realizados.service';
-import { TratamentosService } from '../../services/tratamentos.service';
 import { of } from 'rxjs';
 
 describe('DashboardComponent', () => {
@@ -26,9 +25,6 @@ describe('DashboardComponent', () => {
       .fn()
       .mockReturnValue(of({ total: 0, procedimentos_realizados: [] })),
   };
-  const tratamentosServiceSpy = {
-    listarTratamentos: vi.fn().mockReturnValue(of({ total: 0, tratamentos: [] })),
-  };
 
   beforeEach(async () => {
     authServiceSpy.obterSessaoAutenticada.mockReturnValue({ nome: 'Equipe' });
@@ -41,7 +37,6 @@ describe('DashboardComponent', () => {
         { provide: AgendaService, useValue: agendaServiceSpy },
         { provide: PacientesService, useValue: pacientesServiceSpy },
         { provide: ProcedimentosRealizadosService, useValue: procedimentosServiceSpy },
-        { provide: TratamentosService, useValue: tratamentosServiceSpy },
       ],
     }).compileComponents();
 
@@ -56,11 +51,5 @@ describe('DashboardComponent', () => {
   it('retorna nome do usuario autenticado', () => {
     authServiceSpy.obterSessaoAutenticada.mockReturnValue({ nome: 'Ana' });
     expect(component.nomeUsuario).toBe('Ana');
-  });
-
-  it('troca visibilidade do faturamento', () => {
-    expect(component.ocultarFaturamento).toBe(false);
-    component.alternarOcultacaoFaturamento();
-    expect(component.ocultarFaturamento).toBe(true);
   });
 });

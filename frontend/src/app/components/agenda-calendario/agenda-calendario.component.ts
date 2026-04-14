@@ -16,6 +16,11 @@ export interface AgendaSlot {
   min: number;
 }
 
+export interface AgendaDentista {
+  id: string;
+  nome: string;
+}
+
 @Component({
   selector: 'app-agenda-calendario',
   standalone: true,
@@ -24,6 +29,8 @@ export interface AgendaSlot {
   styleUrl: './agenda-calendario.component.scss',
 })
 export class AgendaCalendarioComponent {
+  @Input() carregando = false;
+  @Input() consultasRenderToken: unknown = null;
   @Input() modoVisualizacao: ModoVisualizacaoAgenda = 'semana';
   @Input() mesAtual = '';
   @Input() anoAtual = 0;
@@ -31,7 +38,8 @@ export class AgendaCalendarioComponent {
   @Input() diasExibidos: DiaAgenda[] = [];
   @Input() diaSelecionado = 0;
   @Input() mesSelecionado = 0;
-  @Input() doutoraSelecionada: 'beatriz' | 'luciana' = 'beatriz';
+  @Input() dentistas: AgendaDentista[] = [];
+  @Input() dentistaSelecionadoId = '';
   @Input() horas: number[] = [];
   @Input() minutos: number[] = [];
   @Input() nomeDiaSelecionado = '';
@@ -41,23 +49,35 @@ export class AgendaCalendarioComponent {
   @Output() periodoAnterior = new EventEmitter<void>();
   @Output() periodoProximo = new EventEmitter<void>();
   @Output() diaSelecionadoChange = new EventEmitter<{ dia: number; mes: number; ano: number }>();
-  @Output() doutoraSelecionadaChange = new EventEmitter<'beatriz' | 'luciana'>();
+  @Output() dentistaSelecionadoChange = new EventEmitter<string>();
   @Output() slotClick = new EventEmitter<AgendaSlot>();
 
   selecionarModoVisualizacao(modo: ModoVisualizacaoAgenda): void {
+    if (this.carregando) {
+      return;
+    }
+
     this.modoVisualizacaoChange.emit(modo);
   }
 
   navegarAnterior(): void {
+    if (this.carregando) {
+      return;
+    }
+
     this.periodoAnterior.emit();
   }
 
   navegarProximo(): void {
+    if (this.carregando) {
+      return;
+    }
+
     this.periodoProximo.emit();
   }
 
   selecionarDia(dia: DiaAgenda): void {
-    if (this.isDiaPassado(dia)) {
+    if (this.carregando || this.isDiaPassado(dia)) {
       return;
     }
 
@@ -68,11 +88,19 @@ export class AgendaCalendarioComponent {
     });
   }
 
-  selecionarDoutora(doutora: 'beatriz' | 'luciana'): void {
-    this.doutoraSelecionadaChange.emit(doutora);
+  selecionarDentista(dentistaId: string): void {
+    if (this.carregando) {
+      return;
+    }
+
+    this.dentistaSelecionadoChange.emit(dentistaId);
   }
 
   clicarSlot(hora: number, min: number): void {
+    if (this.carregando) {
+      return;
+    }
+
     this.slotClick.emit({ hora, min });
   }
 

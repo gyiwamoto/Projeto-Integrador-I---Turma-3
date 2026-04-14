@@ -1,5 +1,10 @@
 <div class="page">
-  <div class="card">
+  <div class="card" [class.card--loading]="carregando" [attr.aria-busy]="carregando">
+    <div class="loading-overlay" *ngIf="carregando">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <p>Carregando agenda...</p>
+    </div>
+
     <div class="header">
       <div class="header-left">
         <img src="logo.png" alt="Sousa Iwamoto" class="logo" />
@@ -14,18 +19,18 @@
     </div>
 
     <div class="modo-visualizacao">
-      <button type="button" class="modo-btn" [class.active]="modoVisualizacao === 'semana'"
+      <button type="button" class="modo-btn" [class.active]="modoVisualizacao === 'semana'" [disabled]="carregando"
         (click)="selecionarModoVisualizacao('semana')">
         Por semana
       </button>
-      <button type="button" class="modo-btn" [class.active]="modoVisualizacao === 'mes'"
+      <button type="button" class="modo-btn" [class.active]="modoVisualizacao === 'mes'" [disabled]="carregando"
         (click)="selecionarModoVisualizacao('mes')">
         Por mes
       </button>
     </div>
 
     <div class="semana-nav">
-      <button class="nav-arrow" (click)="navegarAnterior()">
+      <button class="nav-arrow" [disabled]="carregando" (click)="navegarAnterior()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="15 18 9 12 15 6" />
         </svg>
@@ -40,14 +45,14 @@
 
       <div class="days-nav">
         <button *ngFor="let dia of diasExibidos" class="day-btn" [class.hoje]="dia.hoje"
-          [class.passado]="isDiaPassado(dia)" [disabled]="isDiaPassado(dia)"
+          [class.passado]="isDiaPassado(dia)" [disabled]="carregando || isDiaPassado(dia)"
           [class.active]="diaSelecionado === dia.numero && mesSelecionado === dia.mes" (click)="selecionarDia(dia)">
           <span class="day-name">{{ dia.nome }}</span>
           <span class="day-num">{{ dia.numero | number:'2.0-0' }}</span>
         </button>
       </div>
 
-      <button class="nav-arrow" (click)="navegarProximo()">
+      <button class="nav-arrow" [disabled]="carregando" (click)="navegarProximo()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="9 18 15 12 9 6" />
         </svg>
@@ -55,24 +60,22 @@
     </div>
 
     <div class="doutor-header">
-      <button class="doutor-btn" [class.active]="doutoraSelecionada === 'beatriz'"
-        (click)="selecionarDoutora('beatriz')">AGENDA DRA BEATRIZ</button>
-      <button class="doutor-btn" [class.active]="doutoraSelecionada === 'luciana'"
-        (click)="selecionarDoutora('luciana')">AGENDA DRA LUCIANA</button>
+      <button *ngFor="let dentista of dentistas" class="doutor-btn"
+        [class.active]="dentistaSelecionadoId === dentista.id" [disabled]="carregando"
+        (click)="selecionarDentista(dentista.id)">
+        AGENDA {{ dentista.nome | uppercase }}
+      </button>
     </div>
 
     <div class="data-bar">{{ nomeDiaSelecionado }} - {{ diaSelecionado | number:'2.0-0' }} DE {{ mesAtual }} DE {{
       anoAtual }}</div>
 
-    <div class="grade-wrap">
+    <div class="grade-wrap" [class.bloqueada]="carregando">
       <table class="grade">
         <thead>
           <tr>
             <th class="col-hora">HORA</th>
-            <th>00</th>
-            <th>15</th>
-            <th>30</th>
-            <th>45</th>
+            <th *ngFor="let min of minutos">{{ min | number:'2.0-0' }}</th>
           </tr>
         </thead>
         <tbody>

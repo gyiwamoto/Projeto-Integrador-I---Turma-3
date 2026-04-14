@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { PROCEDIMENTOS_FIXOS } from '../../constants/procedimentos';
 import {
   TabelaColuna,
   TabelaComponent,
@@ -14,11 +14,13 @@ import {
   SalvarProcedimentoRealizadoPayload,
 } from '../../interfaces/ProcedimentoRealizado';
 import { AgendaService } from '../../services/agenda.service';
-import { TratamentoItem, TratamentosService } from '../../services/tratamentos.service';
+import { AuthService } from '../../services/auth.service';
 import { ProcedimentosRealizadosService } from '../../services/procedimentos-realizados.service';
 import { ToastService } from '../../services/toast.service';
-import { dentes, faces } from '../../utils/odontograma';
-import { formatarData } from '../../utils/formatar-data';
+import { dentes, faces } from '../../constants/odontograma';
+import { formatarData, formatarDataHora } from '../../utils/formatar-data';
+import { formatarStatusConsulta } from '../../utils/enums-status';
+import { formatarTextoCurto } from '../../utils/formatar-texto';
 
 interface ConsultaAtendimentoLinha extends TabelaLinha {
   id: string;
@@ -42,12 +44,13 @@ export class AtendimentoComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly agendaService = inject(AgendaService);
-  private readonly tratamentosService = inject(TratamentosService);
+  private readonly authService = inject(AuthService);
   private readonly procedimentosRealizadosService = inject(ProcedimentosRealizadosService);
   private readonly toastService = inject(ToastService);
 
   readonly dentesOdontograma = dentes;
   readonly facesOdontograma = faces;
+  readonly procedimentosFixos = PROCEDIMENTOS_FIXOS;
 
   readonly colunasConsultas: TabelaColuna[] = [
     {
@@ -62,7 +65,7 @@ export class AtendimentoComponent implements OnInit {
     {
       chave: 'observacoes',
       titulo: 'Observacoes',
-      formatador: (valor) => this.formatarTextoCurto(valor),
+      formatador: (valor) => formatarTextoCurto(valor),
     },
   ];
 
@@ -82,19 +85,24 @@ export class AtendimentoComponent implements OnInit {
     tratamentoId: ['', [Validators.required]],
     dente: ['11', [Validators.required]],
     face: ['V', [Validators.required]],
-    dataProcedimento: ['', [Validators.required]],
+    dataProcedimento: [this.obterDataProcedimentoPadrao(), [Validators.required]],
     observacoes: [''],
+  });
+
+  readonly formSenhaFinalizacao = this.fb.nonNullable.group({
+    senhaAtual: ['', [Validators.required, Validators.minLength(6)]],
   });
 
   filtros: Record<string, string> = {};
   carregandoConsultas = false;
-  carregandoTratamentos = false;
   carregandoProcedimentos = false;
   salvandoProcedimento = false;
   finalizandoConsulta = false;
+  confirmandoSenhaFinalizacao = false;
+  mostraModalSenhaFinalizacao = false;
+  mostrarSenhaAtualFinalizacao = false;
 
   consultas: AgendaConsulta[] = [];
-  tratamentos: TratamentoItem[] = [];
   procedimentosConsultaSelecionada: ProcedimentoRealizadoItem[] = [];
   consultaSelecionada: AgendaConsulta | null = null;
 
@@ -138,14 +146,25 @@ export class AtendimentoComponent implements OnInit {
     const consulta = this.consultas.find((item) => item.id === linha['id']);
     if (consulta) {
       if (this.consultaSelecionada?.id === consulta.id) {
-        this.consultaSelecionada = null;
-        this.procedimentosConsultaSelecionada = [];
-        this.carregandoProcedimentos = false;
+        this.fecharDetalheConsulta();
         return;
       }
       this.selecionarConsulta(consulta);
     }
   };
+
+  fecharDetalheConsulta(): void {
+    this.consultaSelecionada = null;
+    this.procedimentosConsultaSelecionada = [];
+    this.carregandoProcedimentos = false;
+    this.formProcedimento.reset({
+      tratamentoId: '',
+      dente: '11',
+      face: 'V',
+      dataProcedimento: this.obterDataProcedimentoPadrao(),
+      observacoes: '',
+    });
+  }
 
   selecionarConsulta(consulta: AgendaConsulta): void {
     this.consultaSelecionada = consulta;
@@ -153,6 +172,7 @@ export class AtendimentoComponent implements OnInit {
       tratamentoId: '',
       dente: '11',
       face: 'V',
+      dataProcedimento: this.obterDataProcedimentoPadrao(),
       observacoes: '',
     });
     this.carregarProcedimentosDaConsulta(consulta.id);
@@ -176,8 +196,8 @@ export class AtendimentoComponent implements OnInit {
       dente: Number(valor.dente),
       face: (valor.face ?? '').toUpperCase(),
       dataProcedimento: valor.dataProcedimento?.trim()
-        ? new Date(valor.dataProcedimento).toISOString()
-        : this.obterDataAtualIso(),
+        ? formatarData(valor.dataProcedimento, 'backend')
+        : formatarData(new Date(), 'backend'),
       observacoes: (valor.observacoes ?? '').trim(),
     };
 
@@ -186,7 +206,10 @@ export class AtendimentoComponent implements OnInit {
       next: () => {
         this.salvandoProcedimento = false;
         this.toastService.sucesso('Procedimento registrado com sucesso.');
-        this.formProcedimento.patchValue({ observacoes: '' });
+        this.formProcedimento.patchValue({
+          dataProcedimento: this.obterDataProcedimentoPadrao(),
+          observacoes: '',
+        });
         this.carregarProcedimentosDaConsulta(this.consultaSelecionada?.id ?? '');
       },
       error: (error: Error) => {
@@ -196,7 +219,70 @@ export class AtendimentoComponent implements OnInit {
     });
   }
 
-  finalizarConsulta(): void {
+  abrirModalSenhaFinalizacao(): void {
+    if (!this.consultaSelecionada) {
+      return;
+    }
+
+    if (!this.podeFinalizarConsulta) {
+      return;
+    }
+
+    this.formSenhaFinalizacao.reset({ senhaAtual: '' });
+    this.mostrarSenhaAtualFinalizacao = false;
+    this.mostraModalSenhaFinalizacao = true;
+  }
+
+  fecharModalSenhaFinalizacao(): void {
+    if (this.confirmandoSenhaFinalizacao) {
+      return;
+    }
+
+    this.mostraModalSenhaFinalizacao = false;
+    this.formSenhaFinalizacao.reset({ senhaAtual: '' });
+    this.mostrarSenhaAtualFinalizacao = false;
+  }
+
+  alternarVisualizacaoSenhaFinalizacao(): void {
+    this.mostrarSenhaAtualFinalizacao = !this.mostrarSenhaAtualFinalizacao;
+  }
+
+  confirmarFinalizacaoComSenha(): void {
+    if (!this.consultaSelecionada) {
+      return;
+    }
+
+    if (this.formSenhaFinalizacao.invalid) {
+      this.formSenhaFinalizacao.markAllAsTouched();
+      this.toastService.erro('Digite sua senha atual para confirmar a finalizacao.');
+      return;
+    }
+
+    const sessao = this.authService.obterSessaoAutenticada();
+    if (!sessao?.email) {
+      this.toastService.erro('Nao foi possivel validar sua sessao. Faca login novamente.');
+      return;
+    }
+
+    const { senhaAtual } = this.formSenhaFinalizacao.getRawValue();
+    this.confirmandoSenhaFinalizacao = true;
+
+    this.authService.login(sessao.email, senhaAtual).subscribe({
+      next: () => {
+        this.confirmandoSenhaFinalizacao = false;
+        this.mostraModalSenhaFinalizacao = false;
+        this.formSenhaFinalizacao.reset({ senhaAtual: '' });
+        this.mostrarSenhaAtualFinalizacao = false;
+        this.finalizarConsulta();
+      },
+      error: (error: Error) => {
+        this.confirmandoSenhaFinalizacao = false;
+        this.toastService.erro(error.message || 'Senha atual invalida.');
+      },
+    });
+  }
+
+  private finalizarConsulta(): void {
     if (!this.consultaSelecionada) {
       return;
     }
@@ -205,8 +291,10 @@ export class AtendimentoComponent implements OnInit {
     this.agendaService.atualizarStatusConsulta(this.consultaSelecionada.id, 'realizado').subscribe({
       next: () => {
         this.finalizandoConsulta = false;
+        this.fecharModalSenhaFinalizacao();
+        this.fecharDetalheConsulta();
         this.toastService.sucesso('Consulta marcada como realizada.');
-        this.carregarConsultas(this.consultaSelecionada?.id ?? undefined);
+        this.carregarConsultas();
       },
       error: (error: Error) => {
         this.finalizandoConsulta = false;
@@ -233,24 +321,17 @@ export class AtendimentoComponent implements OnInit {
 
   private carregarDadosIniciais(): void {
     this.carregandoConsultas = true;
-    this.carregandoTratamentos = true;
     this.consultaSelecionada = null;
     this.procedimentosConsultaSelecionada = [];
 
-    forkJoin({
-      consultas: this.agendaService.listarConsultas(false, 'atendimento'),
-      tratamentos: this.tratamentosService.listarTratamentos(),
-    }).subscribe({
-      next: ({ consultas, tratamentos }) => {
+    this.agendaService.listarConsultas(false, 'atendimento').subscribe({
+      next: (consultas) => {
         this.consultas = consultas;
-        this.tratamentos = tratamentos.tratamentos;
         this.carregandoConsultas = false;
-        this.carregandoTratamentos = false;
         this.cdr.markForCheck();
       },
       error: (error: Error) => {
         this.carregandoConsultas = false;
-        this.carregandoTratamentos = false;
         this.toastService.erro(
           error.message || 'Nao foi possivel carregar os dados do atendimento.',
         );
@@ -307,38 +388,7 @@ export class AtendimentoComponent implements OnInit {
   }
 
   private formatarStatus(status: AgendaConsulta['status']): string {
-    if (status === 'agendado') {
-      return 'Agendado';
-    }
-
-    if (status === 'realizado') {
-      return 'Realizado';
-    }
-
-    return 'Cancelado';
-  }
-
-  private formatarTextoCurto(valor: unknown): string {
-    if (typeof valor !== 'string' || !valor.trim()) {
-      return '-';
-    }
-
-    const texto = valor.trim();
-    return texto.length > 42 ? `${texto.slice(0, 42)}...` : texto;
-  }
-
-  private apenasData(valor: string): string {
-    const data = new Date(valor);
-    if (Number.isNaN(data.getTime())) {
-      return '';
-    }
-
-    return data.toISOString().slice(0, 10);
-  }
-
-  private obterDataAtualIso(): string {
-    const data = new Date();
-    return data.toISOString().slice(0, 10);
+    return formatarStatusConsulta(status);
   }
 
   private ehConsultaDoDiaPendente(consulta: AgendaConsulta): boolean {
@@ -346,6 +396,10 @@ export class AtendimentoComponent implements OnInit {
       return false;
     }
 
-    return this.apenasData(consulta.dataConsulta) === this.obterDataAtualIso();
+    return formatarData(consulta.dataConsulta, 'input') === formatarData(new Date(), 'input');
+  }
+
+  private obterDataProcedimentoPadrao(): string {
+    return formatarDataHora(new Date(), 'input');
   }
 }

@@ -160,9 +160,6 @@ export class AgendaService {
     );
   }
 
-  /**
-   * Retorna consultas em cache (mesmo que expiradas)
-   */
   obterConsultasEmCache(): AgendaConsulta[] {
     return this.queryCache.getSnapshot<AgendaConsulta[]>(this.cacheKeyConsultas) ?? [];
   }
@@ -210,7 +207,6 @@ export class AgendaService {
           consulta: this.mapearConsultaApi(resposta.consulta),
         })),
         tap(() => {
-          // Invalida cache para forçar refresh na próxima vez
           this.queryCache.invalidate(this.cacheKeyConsultas);
         }),
         catchError((error) =>

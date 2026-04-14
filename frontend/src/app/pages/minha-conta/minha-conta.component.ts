@@ -7,7 +7,7 @@ import { AgendaService } from '../../services/agenda.service';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { UsuariosService } from '../../services/usuarios.service';
-import { formatarData } from '../../utils/formatar-data';
+import { formatarData, formatarDataHora } from '../../utils/formatar-data';
 
 @Component({
   selector: 'app-minha-conta',
@@ -86,7 +86,7 @@ export class MinhaContaPage implements OnInit {
   }
 
   formatarDataConsulta(dataConsulta: string): string {
-    return formatarData(dataConsulta);
+    return formatarDataHora(dataConsulta);
   }
 
   formatarStatus(status: AgendaConsulta['status']): string {
