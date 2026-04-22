@@ -7,8 +7,9 @@ Sistema de gerenciamento de consultório odontológico desenvolvido como Projeto
 - Versao atual: `1.1.0`
 - Modulos ativos: autenticacao, dashboard, agenda, pacientes, consultas, convenios, usuarios e minha conta.
 - Catalogo de procedimentos fixos adotado no lugar do modulo de tratamentos.
+- Integracao WhatsApp ativa via Twilio para lembretes de consulta e cron diario.
 - Backend com rotas principais de CRUD e validacao de sessao.
-- Banco com migrations versionadas de `001` ate `013`.
+- Banco com migrations versionadas de `001` ate `014`.
 - Testes frontend executados em 2026-04-03: `205 passed (205)`.
 
 Documentos de acompanhamento:
@@ -164,7 +165,11 @@ O arquivo `vercel.json` na raiz ja define o fluxo de deploy para o monorepo:
 - `PUT /api/convenios?id=<id>`: editar convenio
 - `DELETE /api/convenios?id=<id>`: remover convenio
 - `GET /api/consultas`: listar consultas
+- `POST /api/consultas`: criar consulta
+- `PUT /api/consultas`: atualizar status de consulta
+- `DELETE /api/consultas`: cancelar consulta
 - `GET /api/procedimentos-realizados`: listar procedimentos realizados
+- `GET /api/cron`: executar cron de lembretes WhatsApp com protecao por `CRON_SECRET`
 
 ### Observacao importante sobre pacientes
 
@@ -181,6 +186,10 @@ Variaveis de ambiente obrigatorias para producao:
 
 - `DATABASE_URL`
 - `JWT_SECRET`
+- `CRON_SECRET`
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_PHONE_NUMBER`
 
 ## Variáveis de ambiente
 
@@ -194,6 +203,10 @@ JWT_SECRET=sua-chave-secreta-dev
 JWT_EXPIRES_IN=8h
 BCRYPT_SALT_ROUNDS=12
 DB_TIMEZONE=America/Sao_Paulo
+CRON_SECRET=secret-do-cron
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_PHONE_NUMBER=+1xxxxxxxxxx
 ```
 
 ### Produção
@@ -206,6 +219,10 @@ JWT_SECRET=sua-chave-secreta-prod-forte
 JWT_EXPIRES_IN=8h
 BCRYPT_SALT_ROUNDS=12
 DB_TIMEZONE=America/Sao_Paulo
+CRON_SECRET=secret-do-cron
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_PHONE_NUMBER=+1xxxxxxxxxx
 ```
 
 **Importante:**

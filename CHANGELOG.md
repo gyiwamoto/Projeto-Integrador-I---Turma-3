@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1 - 2026-04-22
+
+### WhatsApp e cron
+
+- Integracao do Twilio consolidada em `_lib` para uso compartilhado pelo backend.
+- Cron `/api/cron` agendado para 14h no horario de Brasilia e com log final de processamento em `logs_acessos`.
+- Registro de `lembrete_enviado` em consultas para evitar reenvios de lembretes.
+
+### Documentacao
+
+- Atualizacao dos READMEs e do plano de tarefas para refletir o estado atual da integracao WhatsApp e da marcacao de consulta.
+
 ## 1.1.0 - 2026-04-14
 
 ### Correcao de fluxo (agenda, consultas e atendimento)
