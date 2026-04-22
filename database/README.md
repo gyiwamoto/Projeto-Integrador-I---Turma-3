@@ -5,9 +5,10 @@ Esta pasta guarda as migrations SQL versionadas do projeto.
 ## Status atual
 
 - Versao: `1.1.0`
-- Migrations disponiveis: `001` ate `013`
+- Migrations disponiveis: `001` ate `014`
 - Estrutura principal do dominio clinico ativa para usuarios, pacientes, convenios, consultas, procedimentos e logs.
 - A tabela `tratamentos` foi removida na migration `011` por decisao de economia de requisicoes, ja que esses dados mudam com baixa frequencia e passaram para catalogo fixo.
+- A migration `014` adiciona o campo `lembrete_enviado` em consultas para controle dos envios de WhatsApp.
 - Proximas etapas incluem ajustes de performance, mais seeds para homologacao e evolucoes para relatorios gerenciais.
 
 ## Estrutura atual
@@ -28,6 +29,7 @@ database/
 |  |- 011_remover_tratamentos_e_ajustar_procedimentos.sql
 |  |- 012_adicionar_duracao_e_procedimentos_consultas.sql
 |  |- 013_datas_em_horario_brasil.sql
+|  |- 014_alteracao_em_consultas.sql
 |- scripts/
 |  |- db-migrate-all.mjs
 |  |- db-run-sql.mjs
@@ -151,6 +153,7 @@ Registra os atendimentos agendados e realizados.
 - observacoes
 - procedimentos_agendados (catalogo fixo)
 - duracao_estimada_min
+- lembrete_enviado
 - criado_em
 
 ### procedimentos_realizados

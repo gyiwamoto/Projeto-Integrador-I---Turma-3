@@ -16,9 +16,9 @@
 
 | Funcionalidade | Endpoint | Body Esperado | Prioridade | Status |
 |---|---|---|---|---|
-| **Criar consulta** | POST /api/consultas | `{ paciente_id, usuario_id, data_consulta, convenio_cnpj, numero_carteirinha, observacoes }` | **P0** | ❌ B1 |
-| **Atualizar status consulta** | PUT /api/consultas/:id | `{ status: "agendado\|realizado\|cancelado" }` | **P0** | ❌ B2 |
-| **Cancelar consulta** | DELETE /api/consultas/:id | `{ motivo? }` | **P0** | ❌ B3 |
+| **Criar consulta** | POST /api/consultas | `{ paciente_id, usuario_id, data_consulta, convenio_cnpj, numero_carteirinha, observacoes }` | **P0** | ✅ B1 |
+| **Atualizar status consulta** | PUT /api/consultas/:id | `{ status: "agendado\|realizado\|cancelado" }` | **P0** | ✅ B2 |
+| **Cancelar consulta** | DELETE /api/consultas/:id | `{ motivo? }` | **P0** | ✅ B3 |
 | **Dashboard indicadores** | GET /api/dashboard/resumo | - (com agregações reais) | **P0** | ❌ B4 |
 | **Registrar procedimento** | POST /api/procedimentos-realizados | `{ consulta_id, tratamento_id, dente, face, data_procedimento, observacoes }` | **P1** | ❌ B5 |
 | **Logs de acesso** | GET /api/logs-acessos | Query params opcionais | **P1** | ❌ B6 |
@@ -588,17 +588,18 @@ Sincronizar consultas agendadas com Google Calendar. Ao criar/atualizar/cancelar
 ### T10: Disparo de mensagens no WhatsApp
 
 **Descrição:**  
-Enviar mensagens WhatsApp para pacientes com `whatsapp_push = true`. Confirmar agendamento ao criar, lembrete 1 dia antes, confirmação após realização.
+Enviar mensagens WhatsApp para pacientes com `whatsapp_push = true`, com cron diario para lembretes de consultas do dia seguinte e log final do processamento.
 
-**Arquivos a criar:**
-- `api/integracoes/whatsapp/index.ts` - Handler para envio
-- `api/integracoes/whatsapp/templates.ts` - Templates de mensagens
+**Arquivos envolvidos:**
+- `api/cron/index.ts` - Handler do cron de lembretes WhatsApp
+- `api/_lib/twilio.ts` - Cliente Twilio compartilhado
 
 **Arquivos a modificar:**
-- `services/consultas.service.ts` - Chamar função de WhatsApp após ações
-- `services/logsAcessos.service.ts` - Registrar tentativas de envio
+- `services/whatsapp.service.ts` - Processar envios e marcar `lembrete_enviado`
+- `services/logsAcessos.service.ts` - Registrar o log final do cron na tabela de auditoria
 
 **Requisitos:**
 - API WhatsApp (Twilio ou similar) com credenciais em .env
 - Template de mensagem com variáveis (paciente, data, horário)
-- Log de sucesso/falha em banco de dados
+- Cron diário em `/api/cron` com proteção por `CRON_SECRET`
+- Log final de sucesso em banco com total de mensagens enviadas e falhas

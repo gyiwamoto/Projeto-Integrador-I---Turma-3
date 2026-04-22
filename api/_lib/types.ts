@@ -22,3 +22,11 @@ export interface JwtUsuarioPayload {
 	email: string;
 	tipo_usuario: TipoUsuario;
 }
+
+export interface ConsultaWhatsapp {
+  id: string;
+  data_consulta: string;
+  paciente_nome: string;
+  telefone: string;
+  dentista_nome: string;
+}

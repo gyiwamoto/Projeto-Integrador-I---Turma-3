@@ -7,6 +7,7 @@ Esta pasta contem o backend do projeto, usando funcoes serverless da Vercel.
 - Versao: `1.1.0`
 - Endpoints ativos para autenticacao e modulos principais (usuarios, pacientes, convenios, consultas e procedimentos realizados).
 - O modulo de tratamentos foi removido e substituido por catalogo fixo de procedimentos.
+- Integracao WhatsApp via Twilio para lembretes de consulta com cron diario.
 - Base preparada para execucao local via `vercel dev`.
 - Parte dos fluxos ainda utiliza dados mockados no frontend e sera substituida por integracoes completas nas proximas iteracoes.
 
@@ -26,7 +27,9 @@ api/
 |- convenios/
 |  |- index.ts     # /api/convenios (GET, POST, PUT, DELETE)
 |- consultas/
-|  |- index.ts     # /api/consultas (GET)
+|  |- index.ts     # /api/consultas (GET, POST, PUT, DELETE)
+|- cron/
+|  |- index.ts     # /api/cron (cron de lembretes WhatsApp)
 |- procedimentos-realizados/
 |  |- index.ts     # /api/procedimentos-realizados (GET)
 |- usuarios/
@@ -52,7 +55,11 @@ api/
 - `PUT /api/convenios?id=<id>`: edita convenio (autenticado)
 - `DELETE /api/convenios?id=<id>`: deleta convenio (admin)
 - `GET /api/consultas`: lista consultas (autenticado)
+- `POST /api/consultas`: cria consulta (autenticado)
+- `PUT /api/consultas?id=<id>`: atualiza status de consulta (autenticado)
+- `DELETE /api/consultas?id=<id>`: cancela consulta (autenticado)
 - `GET /api/procedimentos-realizados`: lista procedimentos realizados (autenticado)
+- `GET /api/cron`: executa o cron de lembretes WhatsApp com `CRON_SECRET`
 
 ### Motivo da mudanca
 
@@ -138,6 +145,15 @@ Se ao rodar `npm run db:run-sql --prefix api` você receber mensagem de uso:
 2. Exemplo: `npm run db:run-sql --prefix api -- ../database/migrations/008_tabela_logs_acessos.sql --env ../.env.development`
 
 Observacao: Para criar novas tabelas/colunas, adicione um novo arquivo SQL em `database/migrations/` com prefixo numerico (exemplo: `009_nova_tabela.sql`) e rode `npm run db:migrate:dev --prefix api`.
+
+## Integracao WhatsApp
+
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_PHONE_NUMBER`
+- `CRON_SECRET`
+
+O cron `/api/cron` processa lembretes de consultas marcadas para o dia seguinte no horario de negocio e registra ao final um log em `logs_acessos` com o total de mensagens enviadas e falhas.
 
 ## Execucao local integrada (frontend + api)
 
