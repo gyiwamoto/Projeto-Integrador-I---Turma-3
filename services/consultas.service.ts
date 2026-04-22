@@ -8,6 +8,7 @@ import {
   obterTimezoneNegocio,
 } from '../api/_lib/date-time';
 import { obterBody, responderErroAutenticacao } from './request-utils.service';
+import { enviarMensagem } from './whatsapp.service';
 
 
 interface ConsultaListagem {
@@ -27,6 +28,11 @@ interface ConsultaListagem {
   duracao_estimada_min: number | null;
   atualizado_em: string;
   criado_em: string;
+}
+
+interface ConsultaCriadaComContato extends ConsultaListagem {
+  paciente_telefone: string | null;
+  paciente_whatsapp_push: boolean | null;
 }
 
 interface ConsultaCriacaoBody {
@@ -389,7 +395,7 @@ export async function criarConsulta(req: VercelRequest, res: VercelResponse) {
   const usuarioIdConsulta = usuarioIdBody || String(usuarioAutenticado.id);
 
   try {
-    const inserido = await pool.query<ConsultaListagem>(
+    const inserido = await pool.query<ConsultaCriadaComContato>(
       `INSERT INTO consultas
         (paciente_id, usuario_id, data_consulta, status, convenio_cnpj, numero_carteirinha, observacoes, procedimentos_agendados, duracao_estimada_min)
        VALUES
@@ -406,6 +412,8 @@ export async function criarConsulta(req: VercelRequest, res: VercelResponse) {
                 (SELECT nome FROM convenios WHERE cnpj = convenio_cnpj LIMIT 1) AS convenio_nome,
                 numero_carteirinha,
                 observacoes,
+                (SELECT telefone FROM pacientes WHERE id = paciente_id LIMIT 1) AS paciente_telefone,
+                (SELECT whatsapp_push FROM pacientes WHERE id = paciente_id LIMIT 1) AS paciente_whatsapp_push,
                 procedimentos_agendados,
                 duracao_estimada_min,
                 atualizado_em,
@@ -426,6 +434,34 @@ export async function criarConsulta(req: VercelRequest, res: VercelResponse) {
     const consultaInserida = inserido.rows[0];
     if (!consultaInserida) {
       return res.status(500).json({ erro: 'Erro interno ao criar consulta.' });
+    }
+
+    if (
+      consultaInserida.paciente_whatsapp_push &&
+      consultaInserida.paciente_telefone &&
+      consultaInserida.paciente_nome &&
+      consultaInserida.usuario_nome
+    ) {
+      const dataHoraFormatada = formatarDataSaidaBr(consultaInserida.data_consulta, true);
+      const [dataConsultaBr = '', horaConsultaBr = ''] = dataHoraFormatada.split(' ');
+
+      try {
+  await enviarMensagem({
+    to: consultaInserida.paciente_telefone,
+    template: 'confirmacaoAgendamento',
+    params: [
+      consultaInserida.paciente_nome,
+      dataConsultaBr,
+      horaConsultaBr,
+      consultaInserida.usuario_nome,
+    ],
+  });
+} catch (err) {
+  console.error('Erro ao enviar confirmação de agendamento', {
+    telefone: consultaInserida.paciente_telefone,
+    erro: err,
+  });
+}
     }
 
     const consulta = normalizarConsultaSaida(consultaInserida);

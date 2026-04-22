@@ -20,8 +20,17 @@
     },
     "api/procedimentos-realizados/index.ts": {
       "runtime": "@vercel/node@5.1.4"
+    },
+    "api/cron/index.ts": {
+      "runtime": "@vercel/node@5.1.4"
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 17 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",

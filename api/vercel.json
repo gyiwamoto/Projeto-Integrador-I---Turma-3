@@ -25,6 +25,10 @@
     {
       "src": "usuarios/index.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "cron/index.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [

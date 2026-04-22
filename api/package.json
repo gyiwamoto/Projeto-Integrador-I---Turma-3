@@ -21,7 +21,8 @@
     "bcryptjs": "^3.0.3",
     "dentista-organizado-workspace": "file:..",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.13.3"
+    "pg": "^8.13.3",
+    "twilio": "^6.0.0"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
