@@ -52,26 +52,18 @@
 }
 
 .primary-action,
-.secondary-action {
-  border: 0;
-  border-radius: 999px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
+.secondary-action,
 .danger-action {
   border: 0;
   border-radius: 999px;
+  padding: 0.8rem 1rem;
   font-weight: 700;
   cursor: pointer;
-  color: #fff;
-  background: linear-gradient(135deg, #bb3e3e, #8e2727);
-  padding: 0.8rem 1rem;
-}
 
-.primary-action,
-.secondary-action {
-  padding: 0.8rem 1rem;
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 .primary-action {
@@ -82,6 +74,11 @@
 .secondary-action {
   background: rgba(31, 111, 141, 0.08);
   color: #17324d;
+}
+
+.danger-action {
+  background: linear-gradient(135deg, #bb3e3e, #8e2727);
+  color: #fff;
 }
 
 .empty-consultations {
@@ -129,6 +126,15 @@ label {
     background: #fff;
     color: #17324d;
     font: inherit;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: #1f6f8d;
+      box-shadow: 0 0 0 3px rgba(31, 111, 141, 0.1);
+    }
   }
 
   input[readonly],
@@ -146,12 +152,14 @@ label {
   input {
     width: auto;
     margin: 0;
+    cursor: pointer;
   }
 
   span {
     margin: 0;
     font-size: 0.9rem;
     color: #17324d;
+    cursor: pointer;
   }
 }
 
@@ -247,6 +255,8 @@ label {
 .consulta-detalhe {
   display: grid;
   gap: 1rem;
+  position: relative;
+  min-height: 70vh;
 }
 
 .consulta-detalhe__bloco {
@@ -264,6 +274,80 @@ label {
   display: flex;
   justify-content: flex-end;
 }
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+.consulta-skeleton-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+}
+
+.consulta-skeleton {
+  display: grid;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.consulta-skeleton__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.6rem, 1fr));
+  gap: 0.65rem;
+}
+
+.consulta-skeleton__card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(18, 34, 54, 0.08);
+  background: rgba(31, 111, 141, 0.04);
+}
+
+.consulta-skeleton__mensagem {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  color: #224b78;
+  font-weight: 600;
+  text-align: center;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.consulta-skeleton__linha {
+  height: 0.7rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e3edf5 25%, #f5f9fc 50%, #e3edf5 75%);
+  background-size: 240% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.consulta-skeleton__linha--titulo {
+  width: 42%;
+  height: 0.85rem;
+}
+
+.consulta-skeleton__linha--curta {
+  width: 40%;
+}
+
+.consulta-skeleton__linha--media {
+  width: 68%;
+}
+
+// ─── Odontograma ──────────────────────────────────────────────────────────────
 
 .odontograma-grid {
   display: grid;
@@ -307,16 +391,60 @@ label {
   }
 }
 
+// ─── Responsive ───────────────────────────────────────────────────────────────
+
 @media (max-width: 960px) {
-  .pacientes-page__header,
-  .consultations-block__header,
-  .grid-2 {
-    grid-template-columns: 1fr;
-    display: grid;
+  .pacientes-page__header {
+    flex-direction: column;
+    align-items: stretch;
+
+    h1 {
+      font-size: 1.25rem;
+    }
+  }
+
+  .consultations-block__header {
+    flex-direction: column;
     align-items: stretch;
   }
 
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .pacientes-page__actions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .pacientes-page {
+    gap: 0.75rem;
+  }
+
   .pacientes-page__header {
-    align-items: stretch;
+    padding: 1rem;
+    border-radius: 1rem;
+
+    h1 {
+      font-size: 1.1rem;
+    }
+
+    p {
+      font-size: 0.9rem;
+    }
+  }
+
+  .consulta-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .odontograma-grid {
+    grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
   }
 }

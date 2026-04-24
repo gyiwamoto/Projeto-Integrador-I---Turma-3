@@ -48,7 +48,6 @@ interface ConsultaCriacaoBody {
   duracao_estimada_min?: number;
 }
 
-const PROCEDIMENTO_AVALIACAO = '100';
 const DURACOES_POR_PROCEDIMENTO: Record<string, number> = {
   '100': 30,
   '110': 30,
@@ -74,7 +73,7 @@ function validarIntervaloConsulta15Min(dataIso: string): boolean {
 
 function normalizarProcedimentosAgendados(valor: unknown): string[] {
   if (!Array.isArray(valor)) {
-    return [PROCEDIMENTO_AVALIACAO];
+    return [];
   }
 
   const codigos = valor
@@ -83,7 +82,7 @@ function normalizarProcedimentosAgendados(valor: unknown): string[] {
     .filter((item) => item in DURACOES_POR_PROCEDIMENTO);
 
   if (!codigos.length) {
-    return [PROCEDIMENTO_AVALIACAO];
+    return [];
   }
 
   return Array.from(new Set(codigos));

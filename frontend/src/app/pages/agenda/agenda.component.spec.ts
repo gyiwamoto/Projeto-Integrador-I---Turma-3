@@ -17,6 +17,7 @@ describe('AgendaComponent', () => {
       .fn()
       .mockReturnValue(of({ mensagem: 'ok', consulta: { id: '1', usuario_id: 'user-id' } })),
     atualizarConsulta: vi.fn().mockReturnValue(of({ mensagem: 'ok', consulta: { id: '1' } })),
+    excluirConsulta: vi.fn().mockReturnValue(of({ mensagem: 'ok' })),
   };
   const toastServiceSpy = {
     info: vi.fn(),
@@ -108,6 +109,7 @@ describe('AgendaComponent', () => {
       numeroCarteirinha: '',
     };
     component.dentistaSelecionadoId.set('dentista-123');
+    component.procedimentosAgendados = ['110'];
     component.modalConfirmAberto = true;
 
     component.confirmarAgendamento();
@@ -128,6 +130,7 @@ describe('AgendaComponent', () => {
       numeroCarteirinha: '',
     };
     component.dentistaSelecionadoId.set(dentistaId);
+    component.procedimentosAgendados = ['110'];
 
     component.confirmarAgendamento();
 
@@ -140,7 +143,7 @@ describe('AgendaComponent', () => {
   });
 
   it('alternarProcedimento adiciona e remove procedimentos', () => {
-    component.procedimentosAgendados = ['100'];
+    component.procedimentosAgendados = [];
 
     component.alternarProcedimento('110');
 
@@ -149,7 +152,7 @@ describe('AgendaComponent', () => {
     component.alternarProcedimento('110');
 
     expect(component.procedimentosAgendados).not.toContain('110');
-    expect(component.procedimentosAgendados).toContain('100');
+    expect(component.procedimentosAgendados).toEqual([]);
   });
 
   it('ngOnInit carrega dados e dentistas na inicializacao', () => {
@@ -189,7 +192,7 @@ describe('AgendaComponent', () => {
     expect(component.modalAcaoAberto).toBe(false);
   });
 
-  it('desabilitaSlotOcupado', () => {
+  it('permite encaixe em slot ocupado com clique simples', () => {
     const hoje = new Date();
     component.selecionarDia(hoje.getDate(), hoje.getMonth(), hoje.getFullYear());
 
@@ -215,7 +218,185 @@ describe('AgendaComponent', () => {
 
     component.clicarSlot(10, 0);
 
-    expect(toastServiceSpy.info).toHaveBeenCalledWith('Horario ja ocupado para esta profissional.');
+    expect(component.modalAcaoAberto).toBe(true);
+  });
+
+  it('abre modal de edicao por acao lateral no slot ocupado', () => {
+    const hoje = new Date();
+    component.selecionarDia(hoje.getDate(), hoje.getMonth(), hoje.getFullYear());
+
+    const consultaOcupando = {
+      id: '1',
+      pacienteId: 'p1',
+      pacienteNome: 'Paciente Test',
+      profissionalNome: 'Dentista',
+      usuarioId: 'user1',
+      status: 'agendado' as const,
+      dataConsulta: new Date(
+        hoje.getFullYear(),
+        hoje.getMonth(),
+        hoje.getDate(),
+        10,
+        0,
+      ).toISOString(),
+      duracaoEstimadaMin: 30,
+      procedimentosAgendados: ['100'],
+    };
+
+    component.consultas.set([consultaOcupando]);
+
+    component.acionarConsultaNoSlot(10, 0, '1');
+
+    expect(component.modalEdicaoAberto).toBe(true);
+    expect(component.consultaEdicaoSelecionada?.id).toBe('1');
+  });
+
+  it('inicia alteracao sem confirmacao intermediaria', () => {
+    const hoje = new Date();
+    component.selecionarDia(hoje.getDate(), hoje.getMonth(), hoje.getFullYear());
+
+    const consultaOcupando = {
+      id: '1',
+      pacienteId: 'p1',
+      pacienteNome: 'Paciente Test',
+      profissionalNome: 'Dentista',
+      usuarioId: 'user1',
+      status: 'agendado' as const,
+      dataConsulta: new Date(
+        hoje.getFullYear(),
+        hoje.getMonth(),
+        hoje.getDate(),
+        10,
+        0,
+      ).toISOString(),
+      duracaoEstimadaMin: 30,
+      procedimentosAgendados: ['100'],
+    };
+
+    component.consultas.set([consultaOcupando]);
+    component.acionarConsultaNoSlot(10, 0, '1');
+
+    component.iniciarReagendamentoDaConsultaSelecionada();
+
+    expect(component.modalConfirmacaoAcaoAberto).toBe(false);
+    expect(component.consultaReagendamentoId).toBe('1');
+  });
+
+  it('mantem confirmacao explicita para cancelamento', () => {
+    const hoje = new Date();
+    component.selecionarDia(hoje.getDate(), hoje.getMonth(), hoje.getFullYear());
+
+    const consultaOcupando = {
+      id: '1',
+      pacienteId: 'p1',
+      pacienteNome: 'Paciente Test',
+      profissionalNome: 'Dentista',
+      usuarioId: 'user1',
+      status: 'agendado' as const,
+      dataConsulta: new Date(
+        hoje.getFullYear(),
+        hoje.getMonth(),
+        hoje.getDate(),
+        10,
+        0,
+      ).toISOString(),
+      duracaoEstimadaMin: 30,
+      procedimentosAgendados: ['100'],
+    };
+
+    component.consultas.set([consultaOcupando]);
+    component.acionarConsultaNoSlot(10, 0, '1');
+
+    component.solicitarCancelamentoConsultaSelecionada();
+
+    expect(component.modalConfirmacaoAcaoAberto).toBe(true);
+  });
+
+  it('nao abre modal de novo agendamento durante reagendamento', () => {
+    const hoje = new Date();
+    component.selecionarDia(hoje.getDate(), hoje.getMonth(), hoje.getFullYear());
+
+    component.consultaReagendamentoId = 'consulta-1';
+    component.pacienteSelecionado = {
+      id: '1',
+      codigoPaciente: 'P001',
+      nome: 'Paciente Teste',
+      telefone: '',
+      email: '',
+      numeroCarteirinha: '',
+    };
+
+    component.clicarSlot(11, 15);
+
+    expect(component.modalAcaoAberto).toBe(false);
+    expect(component.modalConfirmAberto).toBe(true);
+  });
+
+  it('fecha card de confirmacao quando faltam horario ou paciente', () => {
+    component.modalConfirmAberto = true;
+    component.slotSelecionado = null;
+    component.pacienteSelecionado = null;
+
+    component.confirmarAgendamento();
+
+    expect(component.modalConfirmAberto).toBe(false);
+    expect(agendaServiceSpy.criarConsulta).not.toHaveBeenCalled();
+  });
+
+  it('nao permite confirmar sem procedimento selecionado', () => {
+    component.slotSelecionado = { hora: 10, min: 0 };
+    component.pacienteSelecionado = {
+      id: '1',
+      codigoPaciente: 'P001',
+      nome: 'Paciente Teste',
+      telefone: '',
+      email: '',
+      numeroCarteirinha: '',
+    };
+    component.procedimentosAgendados = [];
+
+    component.confirmarAgendamento();
+
+    expect(agendaServiceSpy.criarConsulta).not.toHaveBeenCalled();
+    expect(toastServiceSpy.info).toHaveBeenCalledWith(
+      'Selecione ao menos um procedimento para confirmar o agendamento.',
+    );
+  });
+
+  it('bloqueia novo agendamento quando slot atinge 4 encaixes', () => {
+    const hoje = new Date();
+    component.selecionarDia(hoje.getDate(), hoje.getMonth(), hoje.getFullYear());
+
+    const montarConsulta = (id: string) => ({
+      id,
+      pacienteId: `p${id}`,
+      pacienteNome: `Paciente ${id}`,
+      profissionalNome: 'Dentista',
+      usuarioId: 'user1',
+      status: 'agendado' as const,
+      dataConsulta: new Date(
+        hoje.getFullYear(),
+        hoje.getMonth(),
+        hoje.getDate(),
+        10,
+        0,
+      ).toISOString(),
+      duracaoEstimadaMin: 30,
+      procedimentosAgendados: ['100'],
+    });
+
+    component.consultas.set([
+      montarConsulta('1'),
+      montarConsulta('2'),
+      montarConsulta('3'),
+      montarConsulta('4'),
+    ]);
+
+    component.clicarSlot(10, 0);
+
+    expect(toastServiceSpy.info).toHaveBeenCalledWith(
+      'Limite de 4 pacientes atingido para este horario.',
+    );
     expect(component.modalAcaoAberto).toBe(false);
   });
 });

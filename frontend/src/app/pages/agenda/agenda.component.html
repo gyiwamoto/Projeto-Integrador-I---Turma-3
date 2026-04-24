@@ -3,10 +3,64 @@
   [mesSelecionadoEhAtual]="mesSelecionadoEhAtual" [diasExibidos]="diasExibidos" [diaSelecionado]="diaSelecionado"
   [mesSelecionado]="mesSelecionado" [dentistas]="dentistas()" [dentistaSelecionadoId]="dentistaSelecionadoId()"
   [horas]="horas" [minutos]="minutos" [nomeDiaSelecionado]="nomeDiaSelecionado" [consultaNoSlot]="consultaNoSlot"
-  (modoVisualizacaoChange)="selecionarModoVisualizacao($event)" (periodoAnterior)="periodoAnterior()"
-  (periodoProximo)="periodoProximo()" (diaSelecionadoChange)="selecionarDia($event.dia, $event.mes, $event.ano)"
-  (dentistaSelecionadoChange)="selecionarDentista($event)" (slotClick)="clicarSlot($event.hora, $event.min)">
+  [consultasNoSlot]="consultasNoSlot" (modoVisualizacaoChange)="selecionarModoVisualizacao($event)"
+  (periodoAnterior)="periodoAnterior()" (periodoProximo)="periodoProximo()"
+  (diaSelecionadoChange)="selecionarDia($event.dia, $event.mes, $event.ano)"
+  (dentistaSelecionadoChange)="selecionarDentista($event)" (slotClick)="clicarSlot($event.hora, $event.min)"
+  (slotConsultaAcao)="acionarConsultaNoSlot($event.hora, $event.min, $event.consultaId)">
 </app-agenda-calendario>
+
+<app-modal [aberto]="modalEdicaoAberto" titulo="Editar consulta"
+  descricao="Altere data/horario ou cancele a consulta selecionada" [mostrarBotaoEditar]="false"
+  [mostrarBotaoFechar]="true" (fechar)="fecharModalEdicao()">
+  <div class="edicao-modal">
+    <div class="slot-destaque" *ngIf="slotSelecionado">
+      <span class="slot-destaque__rotulo">Horário ocupado</span>
+      <strong class="slot-destaque__hora">
+        {{ slotSelecionado.hora }}:{{ slotSelecionado.min === 0 ? '00' : slotSelecionado.min }}
+      </strong>
+      <p class="slot-destaque__data">
+        {{ nomeDiaSelecionado }}, {{ diaSelecionado | number:'2.0-0' }} de {{ mesAtual }}
+      </p>
+    </div>
+
+    <div class="edicao-lista" *ngIf="consultaEdicaoSelecionada as consulta; else semConsultaNoSlot">
+      <div class="edicao-item">
+        <div>
+          <strong>{{ consulta.codigoPaciente || consulta.pacienteId }} - {{ consulta.pacienteNome }}</strong>
+          <small>{{ consulta.profissionalNome }}</small>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #semConsultaNoSlot>
+      <p class="sem-resultado">Nenhuma consulta encontrada para este slot.</p>
+    </ng-template>
+
+    <div class="modal-actions">
+      <button class="btn-confirm" (click)="iniciarReagendamentoDaConsultaSelecionada()">Alterar data/horario</button>
+      <button class="btn-cancel" (click)="solicitarCancelamentoConsultaSelecionada()" [disabled]="cancelandoConsulta">
+        Cancelar consulta
+      </button>
+    </div>
+  </div>
+</app-modal>
+
+<app-modal [aberto]="modalConfirmacaoAcaoAberto" titulo="Confirmar ação"
+  descricao="Confirme explicitamente para evitar alterações acidentais" [mostrarBotaoEditar]="false"
+  [mostrarBotaoFechar]="true" (fechar)="cancelarConfirmacaoAcaoEdicao()">
+  <div class="confirmacao-modal">
+    <div class="resumo-consulta" *ngIf="consultaEdicaoSelecionada as consulta">
+      <span class="resumo-consulta__rotulo">Consulta selecionada</span>
+      <strong>{{ consulta.codigoPaciente || consulta.pacienteId }} - {{ consulta.pacienteNome }}</strong>
+      <p>{{ consulta.profissionalNome }}</p>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-confirm" (click)="confirmarAcaoEdicaoSelecionada()">Confirmar cancelamento</button>
+    <button class="btn-cancel" (click)="cancelarConfirmacaoAcaoEdicao()">Voltar</button>
+  </div>
+</app-modal>
 
 <app-modal [aberto]="modalAcaoAberto" titulo="O que deseja fazer?" descricao="Escolha a acao para o horario selecionado"
   [mostrarBotaoEditar]="false" [mostrarBotaoFechar]="true" (fechar)="fecharModalAcao()">
@@ -112,14 +166,15 @@
           </label>
         </div>
 
-        <p class="procedimentos-ajuda">A Avaliação permanece como base quando nenhum outro procedimento estiver marcado.
-        </p>
+        <p class="procedimentos-ajuda">Selecione os procedimentos somente quando houver necessidade de planejamento
+          prévio.</p>
       </div>
       <p class="duracao-estimada">Tempo estimado ocupado: <strong>{{ duracaoSelecionadaTexto }}</strong></p>
     </div>
   </div>
   <div class="modal-actions">
-    <button class="btn-confirm" (click)="confirmarAgendamento()" [disabled]="salvandoAgendamento">
+    <button class="btn-confirm" (click)="confirmarAgendamento()"
+      [disabled]="salvandoAgendamento || !podeConfirmarAgendamento">
       Confirmar
     </button>
     <button class="btn-cancel" (click)="fecharModalConfirmacao()">Cancelar</button>

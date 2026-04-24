@@ -21,6 +21,22 @@ export interface AgendaDentista {
   nome: string;
 }
 
+export interface AgendaConsultaRenderItem {
+  id: string;
+  titulo: string;
+  subtitulo?: string;
+  posicao: number;
+  corIndex?: number;
+  isContinua?: boolean;
+  isEditando?: boolean;
+}
+
+export interface AgendaSlotConsultaAcao {
+  hora: number;
+  min: number;
+  consultaId: string;
+}
+
 @Component({
   selector: 'app-agenda-calendario',
   standalone: true,
@@ -44,6 +60,7 @@ export class AgendaCalendarioComponent {
   @Input() minutos: number[] = [];
   @Input() nomeDiaSelecionado = '';
   @Input() consultaNoSlot: (hora: number, min: number) => string = () => '';
+  @Input() consultasNoSlot: (hora: number, min: number) => AgendaConsultaRenderItem[] = () => [];
 
   @Output() modoVisualizacaoChange = new EventEmitter<ModoVisualizacaoAgenda>();
   @Output() periodoAnterior = new EventEmitter<void>();
@@ -51,6 +68,7 @@ export class AgendaCalendarioComponent {
   @Output() diaSelecionadoChange = new EventEmitter<{ dia: number; mes: number; ano: number }>();
   @Output() dentistaSelecionadoChange = new EventEmitter<string>();
   @Output() slotClick = new EventEmitter<AgendaSlot>();
+  @Output() slotConsultaAcao = new EventEmitter<AgendaSlotConsultaAcao>();
 
   selecionarModoVisualizacao(modo: ModoVisualizacaoAgenda): void {
     if (this.carregando) {
@@ -106,6 +124,20 @@ export class AgendaCalendarioComponent {
 
   obterConsulta(hora: number, min: number): string {
     return this.consultaNoSlot(hora, min);
+  }
+
+  obterConsultas(hora: number, min: number): AgendaConsultaRenderItem[] {
+    return this.consultasNoSlot(hora, min);
+  }
+
+  acionarConsulta(event: Event, hora: number, min: number, consultaId: string): void {
+    event.stopPropagation();
+
+    if (this.carregando) {
+      return;
+    }
+
+    this.slotConsultaAcao.emit({ hora, min, consultaId });
   }
 
   isDiaPassado(dia: DiaAgenda): boolean {

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   AgendaCalendarioComponent,
+  AgendaConsultaRenderItem,
   DiaAgenda,
   ModoVisualizacaoAgenda,
 } from '../../components/agenda-calendario/agenda-calendario.component';
@@ -40,8 +41,9 @@ export class AgendaComponent implements OnInit {
   private readonly agendaService = inject(AgendaService);
   private readonly toastService = inject(ToastService);
   private readonly usuariosService = inject(UsuariosService);
-  private static readonly PROCEDIMENTO_AVALIACAO_CODIGO = '100';
   private static readonly DURACAO_PADRAO_MIN = 30;
+  private static readonly LIMITE_ENCAIXES_POR_SLOT = 4;
+  private static readonly TOTAL_CORES_POR_PACIENTE = 6;
 
   readonly horas = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
   readonly minutos = [0, 15, 30, 45];
@@ -66,7 +68,7 @@ export class AgendaComponent implements OnInit {
   pacienteSelecionado: AgendaPaciente | null = null;
   pacientePreSelecionado: AgendaPaciente | null = null;
   consultaReagendamentoId: string | null = null;
-  procedimentosAgendados: string[] = [AgendaComponent.PROCEDIMENTO_AVALIACAO_CODIGO];
+  procedimentosAgendados: string[] = [];
 
   pacientes = signal<AgendaPaciente[]>([]);
   consultas = signal<AgendaConsulta[]>([]);
@@ -89,6 +91,13 @@ export class AgendaComponent implements OnInit {
 
   readonly diasNomes = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
   readonly consultaNoSlot = (hora: number, min: number): string => this.getConsulta(hora, min);
+  readonly consultasNoSlot = (hora: number, min: number): AgendaConsultaRenderItem[] =>
+    this.getConsultasNoSlotRender(hora, min);
+
+  modalEdicaoAberto = false;
+  modalConfirmacaoAcaoAberto = false;
+  cancelandoConsulta = false;
+  consultaEdicaoSelecionada: AgendaConsulta | null = null;
 
   ngOnInit(): void {
     this.carregarPacienteDaRota();
@@ -223,8 +232,14 @@ export class AgendaComponent implements OnInit {
     return `${selecionados.slice(0, 2).join(', ')} + ${selecionados.length - 2} outro(s)`;
   }
 
+  get podeConfirmarAgendamento(): boolean {
+    return Boolean(
+      this.slotSelecionado && this.pacienteSelecionado && this.procedimentosAgendados.length > 0,
+    );
+  }
+
   getConsulta(hora: number, min: number): string {
-    const consulta = this.obterConsultaNoSlot(hora, min);
+    const consulta = this.obterConsultasNoSlot(hora, min)[0];
 
     if (!consulta) {
       return '';
@@ -233,6 +248,39 @@ export class AgendaComponent implements OnInit {
     const codigoPaciente =
       consulta.codigoPaciente?.trim() || this.obterCodigoPacientePorId(consulta.pacienteId);
     return `${codigoPaciente} ${consulta.pacienteNome}`.trim();
+  }
+
+  getConsultasNoSlotRender(hora: number, min: number): AgendaConsultaRenderItem[] {
+    const consultas = this.obterConsultasNoSlot(hora, min).slice(
+      0,
+      AgendaComponent.LIMITE_ENCAIXES_POR_SLOT,
+    );
+
+    const coresUsadas = new Set<number>();
+
+    return consultas.map((consulta, index) => {
+      let corBase = this.obterCorBaseConsulta(consulta.id);
+
+      // evita repetir cor no mesmo slot
+      while (coresUsadas.has(corBase)) {
+        corBase = (corBase + 1) % 6;
+      }
+
+      coresUsadas.add(corBase);
+
+      const codigoPaciente =
+        consulta.codigoPaciente?.trim() || this.obterCodigoPacientePorId(consulta.pacienteId);
+
+      return {
+        id: consulta.id,
+        titulo: `${codigoPaciente} ${consulta.pacienteNome}`.trim(),
+        subtitulo: consulta.profissionalNome,
+        posicao: index,
+        corIndex: corBase,
+        isContinua: this.isContinuidade(consulta, hora, min),
+        isEditando: this.consultaReagendamentoId === consulta.id,
+      };
+    });
   }
 
   selecionarDia(dia: number, mes: number, ano: number): void {
@@ -327,12 +375,27 @@ export class AgendaComponent implements OnInit {
       return;
     }
 
-    if (this.getConsulta(hora, min)) {
-      this.toastService.info('Horario ja ocupado para esta profissional.');
+    if (this.atingiuLimiteEncaixeNoSlot(hora, min)) {
+      this.toastService.info('Limite de 4 pacientes atingido para este horario.');
       return;
     }
 
     this.slotSelecionado = { hora, min };
+
+    if (this.emModoReagendamento) {
+      this.modalAcaoAberto = false;
+      this.modalBuscaAberto = false;
+
+      if (!this.pacienteSelecionado) {
+        this.modalConfirmAberto = false;
+        this.slotSelecionado = null;
+        this.toastService.info('Selecione novamente a consulta para concluir a alteracao.');
+        return;
+      }
+
+      this.modalConfirmAberto = true;
+      return;
+    }
 
     if (!this.emModoReagendamento) {
       this.definirProcedimentosPadrao();
@@ -345,6 +408,121 @@ export class AgendaComponent implements OnInit {
     }
 
     this.modalAcaoAberto = true;
+  }
+
+  acionarConsultaNoSlot(hora: number, min: number, consultaId: string): void {
+    if (this.dataSelecionadaEhPassada()) {
+      this.toastService.info('Nao e possivel editar consultas em dias anteriores.');
+      return;
+    }
+
+    const consultaSelecionada = this.obterConsultasNoSlot(hora, min).find(
+      (consulta) => consulta.id === consultaId,
+    );
+
+    if (!consultaSelecionada) {
+      this.toastService.info('Consulta nao encontrada para este horario.');
+      return;
+    }
+
+    this.slotSelecionado = { hora, min };
+    this.consultaEdicaoSelecionada = consultaSelecionada;
+    this.modalEdicaoAberto = true;
+  }
+
+  iniciarReagendamentoDaConsultaSelecionada(): void {
+    const consultaSelecionada = this.consultaEdicaoSelecionada;
+
+    if (!consultaSelecionada) {
+      this.toastService.info('Selecione uma consulta para editar.');
+      return;
+    }
+
+    const dataConsultaInput = formatarDataHora(consultaSelecionada.dataConsulta, 'input');
+    const [dataParte, horaParte] = dataConsultaInput.split('T');
+    const [hora = '0', min = '0'] = (horaParte ?? '').split(':');
+
+    if (dataParte) {
+      const [ano = '0', mes = '0', dia = '0'] = dataParte.split('-');
+      this.diaSelecionado = Number(dia);
+      this.mesSelecionado = Number(mes) - 1;
+      this.anoSelecionado = Number(ano);
+    }
+
+    this.slotSelecionado = {
+      hora: Number(hora),
+      min: Number(min),
+    };
+    this.consultaReagendamentoId = consultaSelecionada.id;
+    this.procedimentosAgendados = consultaSelecionada.procedimentosAgendados?.length
+      ? consultaSelecionada.procedimentosAgendados
+      : [];
+
+    const paciente = this.pacientes().find((item) => item.id === consultaSelecionada.pacienteId);
+    this.pacienteSelecionado = paciente ??
+      this.pacienteSelecionado ?? {
+        id: consultaSelecionada.pacienteId,
+        codigoPaciente: consultaSelecionada.codigoPaciente ?? consultaSelecionada.pacienteId,
+        nome: consultaSelecionada.pacienteNome,
+        telefone: '',
+        email: '',
+        numeroCarteirinha: consultaSelecionada.numeroCarteirinha ?? '',
+      };
+
+    this.modalEdicaoAberto = false;
+    this.toastService.info('Selecione um novo horario na agenda para concluir a alteracao.');
+  }
+
+  solicitarCancelamentoConsultaSelecionada(): void {
+    this.modalConfirmacaoAcaoAberto = true;
+  }
+
+  confirmarAcaoEdicaoSelecionada(): void {
+    const consultaSelecionada = this.consultaEdicaoSelecionada;
+
+    if (!consultaSelecionada) {
+      this.toastService.info('Selecione uma consulta para cancelar.');
+      return;
+    }
+
+    this.modalConfirmacaoAcaoAberto = false;
+    this.executarCancelamentoConsulta(consultaSelecionada);
+  }
+
+  cancelarConsultaSelecionada(): void {
+    this.solicitarCancelamentoConsultaSelecionada();
+  }
+
+  cancelarConfirmacaoAcaoEdicao(): void {
+    this.modalConfirmacaoAcaoAberto = false;
+  }
+
+  private executarCancelamentoConsulta(consultaSelecionada: AgendaConsulta): void {
+    if (!consultaSelecionada || this.cancelandoConsulta) {
+      return;
+    }
+
+    this.cancelandoConsulta = true;
+
+    this.agendaService.excluirConsulta(consultaSelecionada.id).subscribe({
+      next: () => {
+        this.cancelandoConsulta = false;
+        this.removerConsultaLocal(consultaSelecionada.id);
+        this.fecharModalEdicao();
+        this.toastService.sucesso('Consulta cancelada com sucesso.');
+      },
+      error: (error: Error) => {
+        this.cancelandoConsulta = false;
+        this.toastService.erro(error.message || 'Nao foi possivel cancelar a consulta.');
+      },
+    });
+  }
+
+  fecharModalEdicao(): void {
+    this.modalEdicaoAberto = false;
+    this.modalConfirmacaoAcaoAberto = false;
+    this.cancelandoConsulta = false;
+    this.consultaEdicaoSelecionada = null;
   }
 
   escolherAgendar(): void {
@@ -379,6 +557,12 @@ export class AgendaComponent implements OnInit {
   confirmarAgendamento(): void {
     if (!this.slotSelecionado || !this.pacienteSelecionado) {
       this.toastService.erro('Selecione um paciente e horario antes de confirmar.');
+      this.fecharModalConfirmacao();
+      return;
+    }
+
+    if (!this.procedimentosAgendados.length) {
+      this.toastService.info('Selecione ao menos um procedimento para confirmar o agendamento.');
       return;
     }
 
@@ -428,6 +612,7 @@ export class AgendaComponent implements OnInit {
         this.slotSelecionado = null;
         this.consultaReagendamentoId = null;
         this.definirProcedimentosPadrao();
+        this.fecharModalEdicao();
 
         if (this.ehRespostaComConsulta(resposta)) {
           this.aplicarUpsertConsultaLocal(resposta.consulta);
@@ -482,10 +667,7 @@ export class AgendaComponent implements OnInit {
     const jaSelecionado = this.procedimentosAgendados.includes(codigo);
 
     if (jaSelecionado) {
-      const restante = this.procedimentosAgendados.filter((item) => item !== codigo);
-      this.procedimentosAgendados = restante.length
-        ? restante
-        : [AgendaComponent.PROCEDIMENTO_AVALIACAO_CODIGO];
+      this.procedimentosAgendados = this.procedimentosAgendados.filter((item) => item !== codigo);
       return;
     }
 
@@ -713,6 +895,24 @@ export class AgendaComponent implements OnInit {
     this.consultas.set(atualizadas);
   }
 
+  private removerConsultaLocal(consultaId: string): void {
+    this.consultas.set(this.consultas().filter((consulta) => consulta.id !== consultaId));
+  }
+
+  private atingiuLimiteEncaixeNoSlot(hora: number, min: number): boolean {
+    const consultasNoSlot = this.obterConsultasNoSlot(hora, min);
+
+    if (!this.emModoReagendamento) {
+      return consultasNoSlot.length >= AgendaComponent.LIMITE_ENCAIXES_POR_SLOT;
+    }
+
+    const consultasEfetivas = consultasNoSlot.filter(
+      (consulta) => consulta.id !== this.consultaReagendamentoId,
+    );
+
+    return consultasEfetivas.length >= AgendaComponent.LIMITE_ENCAIXES_POR_SLOT;
+  }
+
   private ehRespostaComConsulta(
     resposta: { mensagem: string } | { mensagem: string; consulta: AgendaConsulta },
   ): resposta is { mensagem: string; consulta: AgendaConsulta } {
@@ -728,11 +928,22 @@ export class AgendaComponent implements OnInit {
   }
 
   private definirProcedimentosPadrao(): void {
-    this.procedimentosAgendados = [AgendaComponent.PROCEDIMENTO_AVALIACAO_CODIGO];
+    this.procedimentosAgendados = [];
   }
 
-  private obterConsultaNoSlot(hora: number, min: number): AgendaConsulta | undefined {
-    return this.consultasDoDiaSelecionado.find((consulta) =>
+  private obterCorPorPaciente(pacienteId: string): number {
+    let acumulador = 0;
+
+    for (let indice = 0; indice < pacienteId.length; indice += 1) {
+      acumulador = (acumulador << 5) - acumulador + pacienteId.charCodeAt(indice);
+      acumulador |= 0;
+    }
+
+    return Math.abs(acumulador) % AgendaComponent.TOTAL_CORES_POR_PACIENTE;
+  }
+
+  private obterConsultasNoSlot(hora: number, min: number): AgendaConsulta[] {
+    return this.consultasDoDiaSelecionado.filter((consulta) =>
       this.slotPertenceConsulta(consulta, hora, min),
     );
   }
@@ -871,5 +1082,28 @@ export class AgendaComponent implements OnInit {
     } catch {
       // Ignora bloqueios de storage para nao quebrar fluxo da agenda.
     }
+  }
+
+  private obterCorBaseConsulta(consultaId: string): number {
+    let hash = 0;
+
+    for (let i = 0; i < consultaId.length; i++) {
+      hash = (hash << 5) - hash + consultaId.charCodeAt(i);
+      hash |= 0;
+    }
+
+    return Math.abs(hash) % 6;
+  }
+
+  private isContinuidade(consulta: AgendaConsulta, hora: number, min: number): boolean {
+    const dataConsulta = formatarDataHora(consulta.dataConsulta, 'input');
+    if (!dataConsulta) return false;
+
+    const [, horaParte] = dataConsulta.split('T');
+    if (!horaParte) return false;
+
+    const [horaInicio, minInicio] = horaParte.split(':').map(Number);
+
+    return !(horaInicio === hora && minInicio === min);
   }
 }
