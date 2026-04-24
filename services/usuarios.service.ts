@@ -146,7 +146,7 @@ export async function criarUsuario(req: VercelRequest, res: VercelResponse) {
     const senhaHash = await gerarSenhaHash(dados.senha);
 
     const resultado = await pool.query<Omit<Usuario, 'senha'>>(
-      'INSERT INTO usuarios (nome, email, senha, tipo_usuario) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, tipo_usuario, criado_em',
+      'INSERT INTO usuarios (nome, email, senha_hash, tipo_usuario) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, tipo_usuario, criado_em',
       [dados.nome, dados.email, senhaHash, dados.tipo_usuario],
     );
 
@@ -233,7 +233,7 @@ export async function editarUsuario(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ erro: 'Senha deve ser uma string.' });
       }
       const senhaHash = await gerarSenhaHash(body.senha);
-      campos.push({ chave: 'senha', valor: senhaHash });
+      campos.push({ chave: 'senha_hash', valor: senhaHash });
     }
 
     if (campos.length === 0) {

@@ -54,6 +54,7 @@ export class PacientesComponent implements OnInit {
   pacienteModalAberto = false;
   modalExclusaoAberto = false;
   modoFormulario: ModoFormularioPaciente = 'criar';
+  conveniosCarregados = false;
 
   pacienteSelecionado: PacienteItem | null = null;
   pacienteParaExcluir: PacienteItem | null = null;
@@ -66,6 +67,16 @@ export class PacientesComponent implements OnInit {
 
   readonly dentesOdontograma = dentes;
   readonly facesOdontograma = faces;
+
+  readonly mapaProcedimentos = computed(() => {
+    const mapa = new Set<string>();
+
+    for (const p of this.procedimentosConsultaSelecionada) {
+      mapa.add(`${p.dente}-${p.face}`);
+    }
+
+    return mapa;
+  });
 
   readonly colunasConsultasPaciente: TabelaColuna[] = [
     {
@@ -226,8 +237,6 @@ export class PacientesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.carregarConsultas();
-    this.carregarConvenios();
     this.carregarPacientes(this.obterIntervaloInicialSemanaOperacional());
 
     if (this.route.snapshot.queryParamMap.get('novo') === '1') {
@@ -257,7 +266,6 @@ export class PacientesComponent implements OnInit {
   onTelefoneInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     const valorFormatado = this.aplicarMascaraTelefone(input.value);
-
     input.value = valorFormatado;
     this.formPaciente.patchValue({ telefone: valorFormatado }, { emitEvent: false });
   }
@@ -265,9 +273,15 @@ export class PacientesComponent implements OnInit {
   onDataNascimentoInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     const valorFormatado = this.aplicarMascaraDataNascimento(input.value);
-
     input.value = valorFormatado;
     this.formPaciente.patchValue({ dataNascimento: valorFormatado }, { emitEvent: false });
+  }
+
+  onConvenioFocus(): void {
+    if (this.conveniosCarregados) {
+      return;
+    }
+    this.carregarConvenios();
   }
 
   get linhasTabelaPacientes(): TabelaLinha[] {
@@ -309,6 +323,8 @@ export class PacientesComponent implements OnInit {
   abrirNovoPaciente(): void {
     this.modoFormulario = 'criar';
     this.pacienteSelecionado = null;
+    this.conveniosCarregados = false;
+    this.convenios = [];
     this.pacienteModalAberto = true;
     this.formPaciente.reset({
       nome: '',
@@ -324,8 +340,11 @@ export class PacientesComponent implements OnInit {
   abrirPaciente(paciente: PacienteItem): void {
     this.modoFormulario = 'editar';
     this.pacienteSelecionado = paciente;
+    this.conveniosCarregados = false;
+    this.convenios = [];
     this.pacienteModalAberto = true;
     this.preencherFormularioPaciente(paciente);
+    this.carregarConsultas();
   }
 
   salvarPaciente(): void {
@@ -429,9 +448,7 @@ export class PacientesComponent implements OnInit {
   }
 
   possuiProcedimentoNoDenteFace(dente: number, faceCodigo: string): boolean {
-    return this.procedimentosConsultaSelecionada.some(
-      (procedimento) => procedimento.dente === dente && procedimento.face === faceCodigo,
-    );
+    return this.mapaProcedimentos().has(`${dente}-${faceCodigo}`);
   }
 
   private preencherFormularioPaciente(paciente: PacienteItem): void {
@@ -442,7 +459,7 @@ export class PacientesComponent implements OnInit {
       telefone: this.aplicarMascaraTelefone(paciente.telefone),
       whatsappPush: paciente.whatsappPush,
       email: paciente.email,
-      convenioId: paciente.convenioId,
+      convenioId: paciente.convenioId ?? '',
     });
   }
 
@@ -541,9 +558,13 @@ export class PacientesComponent implements OnInit {
     this.conveniosService.listarConvenios().subscribe({
       next: (resposta) => {
         this.convenios = resposta.convenios;
+        this.conveniosCarregados = true;
+        this.cdr.markForCheck();
       },
       error: () => {
         this.convenios = [];
+        this.conveniosCarregados = true;
+        this.cdr.markForCheck();
       },
     });
   }

@@ -81,9 +81,21 @@
         <tbody>
           <tr *ngFor="let hora of horas">
             <td class="col-hora">{{ hora }}:00</td>
-            <td *ngFor="let min of minutos" class="slot" [class.ocupado]="obterConsulta(hora, min)"
-              (click)="clicarSlot(hora, min)">
-              <span *ngIf="obterConsulta(hora, min)" class="consulta">{{ obterConsulta(hora, min) }}</span>
+            <td *ngFor="let min of minutos" class="slot" [class.ocupado]="obterConsultas(hora, min).length"
+              [class.slot--multiplo]="obterConsultas(hora, min).length > 1" (click)="clicarSlot(hora, min)">
+              <div class="slot-stack" [class.slot-stack--multiplo]="obterConsultas(hora, min).length > 1"
+                [style.--slot-count]="obterConsultas(hora, min).length || 1">
+                <div class="slot-item" *ngFor="let consulta of obterConsultas(hora, min); let i = index"
+                  [ngClass]="'slot-item--cor-' + (consulta.corIndex ?? i)" [attr.aria-label]="consulta.titulo">
+                  <span class="consulta-tag-editando" *ngIf="consulta.isEditando">Editando</span>
+                  <span class="consulta">{{ consulta.titulo }}</span>
+                  <button type="button" class="consulta-acao"
+                    [attr.aria-label]="'Editar ou cancelar consulta de ' + consulta.titulo"
+                    (click)="acionarConsulta($event, hora, min, consulta.id)">
+                    ⋮
+                  </button>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>

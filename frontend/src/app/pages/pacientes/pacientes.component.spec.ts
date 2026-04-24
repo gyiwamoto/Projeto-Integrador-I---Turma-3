@@ -5,6 +5,8 @@ import { of } from 'rxjs';
 import { PacientesComponent } from './pacientes.component';
 import { PacientesService } from '../../services/pacientes.service';
 import { ConveniosService } from '../../services/convenios.service';
+import { AgendaService } from '../../services/agenda.service';
+import { ProcedimentosRealizadosService } from '../../services/procedimentos-realizados.service';
 import { ToastService } from '../../services/toast.service';
 
 describe('PacientesComponent', () => {
@@ -20,6 +22,12 @@ describe('PacientesComponent', () => {
   };
   const conveniosServiceSpy = {
     listarConvenios: vi.fn().mockReturnValue(of({ convenios: [] })),
+  };
+  const agendaServiceSpy = {
+    listarConsultas: vi.fn().mockReturnValue(of([])),
+  };
+  const procedimentosRealizadosServiceSpy = {
+    listarPorConsulta: vi.fn().mockReturnValue(of([])),
   };
   const toastServiceSpy = {
     sucesso: vi.fn(),
@@ -40,6 +48,8 @@ describe('PacientesComponent', () => {
         },
         { provide: PacientesService, useValue: pacientesServiceSpy },
         { provide: ConveniosService, useValue: conveniosServiceSpy },
+        { provide: AgendaService, useValue: agendaServiceSpy },
+        { provide: ProcedimentosRealizadosService, useValue: procedimentosRealizadosServiceSpy },
         { provide: ToastService, useValue: toastServiceSpy },
       ],
     }).compileComponents();
@@ -63,5 +73,22 @@ describe('PacientesComponent', () => {
   it('executa acao de filtro para novo paciente', () => {
     component.onAcaoFiltro('novo-paciente');
     expect(component.pacienteModalAberto).toBe(true);
+  });
+
+  it('abre detalhes da consulta imediatamente no primeiro clique', () => {
+    const consulta = {
+      id: 'consulta-1',
+      pacienteId: 'paciente-1',
+      pacienteNome: 'Paciente Teste',
+      profissionalNome: 'Dentista Teste',
+      usuarioId: 'usuario-1',
+      status: 'agendado' as const,
+      dataConsulta: new Date().toISOString(),
+    };
+
+    component.abrirConsultaDetalhe(consulta);
+
+    expect(component.consultaDetalheAberto).toBe(true);
+    expect(component.consultaSelecionada?.id).toBe('consulta-1');
   });
 });
