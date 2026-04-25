@@ -103,19 +103,8 @@
   [mostrarBotaoEditar]="false" (fechar)="fecharConsultaDetalhe()">
   <div class="consulta-detalhe" *ngIf="consultaSelecionada">
 
-    <div class="consulta-skeleton-overlay" *ngIf="carregandoProcedimentos">
-      <div class="consulta-skeleton">
-        <div class="consulta-skeleton__linha consulta-skeleton__linha--titulo"></div>
-        <div class="consulta-skeleton__cards">
-          <div class="consulta-skeleton__card" *ngFor="let _ of [1,2,3,4,5,6]">
-            <div class="consulta-skeleton__linha consulta-skeleton__linha--curta"></div>
-            <div class="consulta-skeleton__linha"></div>
-            <div class="consulta-skeleton__linha consulta-skeleton__linha--media"></div>
-          </div>
-        </div>
-        <div class="consulta-skeleton__mensagem">Carregando procedimentos...</div>
-      </div>
-    </div>
+    <app-loading-skeleton mensagemCarregando="Carregando procedimentos..." [qtdSecoes]="4"
+      *ngIf="carregandoProcedimentos" />
 
     <div *ngIf="!carregandoProcedimentos">
       <div class="consulta-meta">
@@ -165,8 +154,8 @@
       </div>
 
       <div class="consulta-detalhe__acoes">
-        <button type="button" class="secondary-action" (click)="irParaAtendimento(consultaSelecionada)">
-          Abrir atendimento
+        <button type="button" class="secondary-action">
+          Editar atendimento
         </button>
       </div>
     </div>

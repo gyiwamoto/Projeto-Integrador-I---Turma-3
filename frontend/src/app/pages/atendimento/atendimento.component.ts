@@ -176,6 +176,7 @@ export class AtendimentoComponent implements OnInit {
       observacoes: '',
     });
     this.carregarProcedimentosDaConsulta(consulta.id);
+    this.cdr.detectChanges();
   }
 
   salvarProcedimento(): void {

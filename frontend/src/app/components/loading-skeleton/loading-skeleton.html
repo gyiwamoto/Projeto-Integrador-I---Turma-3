@@ -1,0 +1,23 @@
+<div class="skeleton-overlay">
+  <div class="skeleton">
+
+    <ng-container *ngFor="let _ of gerarArray(qtdSecoes)">
+
+      <div class="skeleton__linha skeleton__linha--titulo"></div>
+
+      <div class="skeleton__cards">
+        <div class="skeleton__card" *ngFor="let _ of gerarArray(qtdCards)">
+          <div class="skeleton__linha skeleton__linha--curta"></div>
+          <div class="skeleton__linha"></div>
+          <div class="skeleton__linha skeleton__linha--media"></div>
+        </div>
+      </div>
+
+    </ng-container>
+
+    <div class="skeleton__mensagem">
+      {{ mensagemCarregando }}
+    </div>
+
+  </div>
+</div>
