@@ -10,3 +10,9 @@ export function obterClienteTwilio() {
 
   return Twilio(twilioAccountSid, twilioAuthToken);
 }
+
+export function normalizarTelefone(telefone: string): string {
+  const digitos = telefone.replace(/\D/g, '');
+  const semZero = digitos.startsWith('0') ? digitos.slice(1) : digitos;
+  return `+55${semZero}`;
+}

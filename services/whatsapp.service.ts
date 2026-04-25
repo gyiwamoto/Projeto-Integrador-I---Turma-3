@@ -1,6 +1,6 @@
 import pool from '../api/_lib/db';
 import { formatarDataSaidaBr, obterTimezoneNegocio } from '../api/_lib/date-time';
-import { obterClienteTwilio } from '../api/_lib/twilio';
+import { normalizarTelefone, obterClienteTwilio } from '../api/_lib/twilio';
 import type { ConsultaWhatsapp } from '../api/_lib/types';
 
 type TemplateKey =
@@ -58,13 +58,15 @@ export async function enviarMensagem<T extends TemplateKey>({
   params: TemplateParams[T];
 }) {
   const client = obterClienteTwilio();
+  const toNormalizado = normalizarTelefone(to); 
+  console.log(toNormalizado);
 
   const templateFn = whatsappTemplates[template] as (...args: TemplateParams[T]) => string;
   const body = templateFn(...params);
 
   await client.messages.create({
-    from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER || '+14155238886'}`, //playground number
-    to: `whatsapp:${to}`,
+    from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER || '+14155238886'}`,//playground number
+    to: `whatsapp:${toNormalizado}`,
     body,
   });
 }
