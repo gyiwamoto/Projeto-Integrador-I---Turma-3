@@ -26,13 +26,21 @@ import { ProcedimentoRealizadoItem } from '../../interfaces/ProcedimentoRealizad
 import { formatarData, formatarDataHora, formatarIntervaloDatas } from '../../utils/formatar-data';
 import { formatarStatusConsulta } from '../../utils/enums-status';
 import { formatarTextoCurto } from '../../utils/formatar-texto';
+import { LoadingSkeleton } from '../../components/loading-skeleton/loading-skeleton';
 
 type ModoFormularioPaciente = 'criar' | 'editar';
 
 @Component({
   selector: 'app-pacientes',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ModalComponent, TabelaComponent, FiltrosComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    ModalComponent,
+    TabelaComponent,
+    FiltrosComponent,
+    LoadingSkeleton,
+  ],
   templateUrl: './pacientes.component.html',
   styleUrl: './pacientes.component.scss',
 })
@@ -431,6 +439,7 @@ export class PacientesComponent implements OnInit {
   abrirConsultaDetalhe(consulta: AgendaConsulta): void {
     this.consultaSelecionada = consulta;
     this.consultaDetalheAberto = true;
+    this.cdr.detectChanges();
     this.carregarProcedimentosConsulta(consulta.id);
   }
 
@@ -439,12 +448,6 @@ export class PacientesComponent implements OnInit {
     this.consultaSelecionada = null;
     this.procedimentosConsultaSelecionada = [];
     this.carregandoProcedimentos = false;
-  }
-
-  irParaAtendimento(consulta: AgendaConsulta): void {
-    void this.router.navigate(['/dashboard/atendimento'], {
-      queryParams: { consultaId: consulta.id },
-    });
   }
 
   possuiProcedimentoNoDenteFace(dente: number, faceCodigo: string): boolean {
@@ -506,12 +509,13 @@ export class PacientesComponent implements OnInit {
 
   private carregarProcedimentosConsulta(consultaId: string): void {
     this.carregandoProcedimentos = true;
+    this.cdr.detectChanges();
 
     this.procedimentosRealizadosService.listarPorConsulta(consultaId).subscribe({
       next: (procedimentos) => {
         this.procedimentosConsultaSelecionada = procedimentos ?? [];
         this.carregandoProcedimentos = false;
-        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
       error: (error: Error) => {
         this.procedimentosConsultaSelecionada = [];
@@ -519,7 +523,7 @@ export class PacientesComponent implements OnInit {
         this.toastService.erro(
           error.message || 'Nao foi possivel carregar os procedimentos da consulta.',
         );
-        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
     });
   }
