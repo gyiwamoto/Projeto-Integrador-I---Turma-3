@@ -1,7 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { of, Subject } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  finalize,
+  map,
+  switchMap,
+  takeUntil,
+} from 'rxjs/operators';
 import {
   AgendaCalendarioComponent,
   AgendaConsultaRenderItem,
@@ -9,13 +19,20 @@ import {
   ModoVisualizacaoAgenda,
 } from '../../components/agenda-calendario/agenda-calendario.component';
 import { AgendaConsulta, AgendaPaciente } from '../../interfaces/Agenda';
+import { PacienteItem } from '../../interfaces/Paciente';
 import { ModalComponent } from '../../components/modal/modal.component';
 import { AgendaService } from '../../services/agenda.service';
+import { PacientesService } from '../../services/pacientes.service';
 import { ToastService } from '../../services/toast.service';
 import { PROCEDIMENTOS, type Procedimento } from '../../constants/procedimentos';
 import { UsuariosService } from '../../services/usuarios.service';
 import { UsuarioListaItem } from '../../interfaces/Usuario';
-import { formatarData, formatarDataHora, formatarIntervaloDatas } from '../../utils/formatar-data';
+import {
+  formatarData,
+  formatarDataHora,
+  formatarIntervaloDatas,
+  obterIntervaloSemanaOperacional,
+} from '../../utils/formatar-data';
 
 interface Slot {
   hora: number;
@@ -34,11 +51,13 @@ interface DentistaAgenda {
   templateUrl: './agenda.component.html',
   styleUrl: './agenda.component.scss',
 })
-export class AgendaComponent implements OnInit {
+export class AgendaComponent implements OnInit, OnDestroy {
   private static readonly CHAVE_DENTISTA_SELECIONADO = 'agenda:dentista-selecionado-id';
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly agendaService = inject(AgendaService);
+  private readonly pacientesService = inject(PacientesService);
   private readonly toastService = inject(ToastService);
   private readonly usuariosService = inject(UsuariosService);
   private static readonly DURACAO_PADRAO_MIN = 30;
@@ -94,26 +113,44 @@ export class AgendaComponent implements OnInit {
   readonly consultasNoSlot = (hora: number, min: number): AgendaConsultaRenderItem[] =>
     this.getConsultasNoSlotRender(hora, min);
 
+  private readonly termoBuscaPacientesSubject = new Subject<string>();
+  private readonly destruir$ = new Subject<void>();
+
   modalEdicaoAberto = false;
   modalConfirmacaoAcaoAberto = false;
   cancelandoConsulta = false;
   consultaEdicaoSelecionada: AgendaConsulta | null = null;
+  carregandoBuscaPacientes = false;
 
   ngOnInit(): void {
+    this.configurarBuscaPacientes();
     this.carregarPacienteDaRota();
     this.carregarDentistas();
     this.carregarPacientes();
     this.carregarConsultas();
   }
 
+  ngOnDestroy(): void {
+    this.destruir$.next();
+    this.destruir$.complete();
+    this.termoBuscaPacientesSubject.complete();
+  }
+
+  private readonly pacientesBuscaState = signal<AgendaPaciente[]>([]);
+
   get pacientesFiltrados(): AgendaPaciente[] {
     const pacientes = this.pacientes();
+
+    const termoNormalizado = this.normalizar(this.termoBusca);
+
+    if (termoNormalizado.length >= 3) {
+      return this.pacientesBuscaState();
+    }
 
     if (!this.termoBusca.trim()) {
       return pacientes;
     }
 
-    const termo = this.normalizar(this.termoBusca);
     return pacientes.filter((paciente) => {
       return [
         paciente.nome,
@@ -124,7 +161,7 @@ export class AgendaComponent implements OnInit {
       ]
         .map((valor) => this.normalizar(valor))
         .join(' ')
-        .includes(termo);
+        .includes(termoNormalizado);
     });
   }
 
@@ -305,6 +342,11 @@ export class AgendaComponent implements OnInit {
   selecionarDentista(dentistaId: string): void {
     this.dentistaSelecionadoId.set(dentistaId);
     this.salvarDentistaSelecionado(dentistaId);
+  }
+
+  onTermoBuscaChange(valor: string): void {
+    this.termoBusca = valor;
+    this.termoBuscaPacientesSubject.next(valor);
   }
 
   alternarDropdownProcedimentos(): void {
@@ -534,7 +576,7 @@ export class AgendaComponent implements OnInit {
       return;
     }
 
-    this.termoBusca = '';
+    this.onTermoBuscaChange('');
     this.pacienteSelecionado = null;
     this.modalBuscaAberto = true;
   }
@@ -629,6 +671,9 @@ export class AgendaComponent implements OnInit {
 
         this.pacienteSelecionado = null;
 
+        this.termoBusca = '';
+        this.pacientesBuscaState.set([]);
+
         this.carregarConsultasPeriodoAtual(true);
         this.limparParametrosAgendamentoDaUrl();
 
@@ -646,17 +691,20 @@ export class AgendaComponent implements OnInit {
   fecharModalAcao(): void {
     this.modalAcaoAberto = false;
     this.slotSelecionado = null;
+    this.pacienteSelecionado = null;
   }
 
   fecharModalBusca(): void {
     this.modalBuscaAberto = false;
     this.slotSelecionado = null;
+    this.pacienteSelecionado = null;
   }
 
   fecharModalConfirmacao(): void {
     this.modalConfirmAberto = false;
     this.procedimentosDropdownAberto = false;
     this.slotSelecionado = null;
+    this.pacienteSelecionado = null;
 
     if (!this.emModoReagendamento) {
       this.definirProcedimentosPadrao();
@@ -699,10 +747,16 @@ export class AgendaComponent implements OnInit {
   private carregarDentistas(): void {
     this.usuariosService.listarUsuarios().subscribe({
       next: (resposta) => {
-        this.aplicarDentistasDaLista(resposta.usuarios ?? []);
+        this.aplicarDentistasDaLista(
+          (resposta.usuarios ?? []).filter((usuario) => usuario.tipo_usuario === 'dentista'),
+        );
       },
       error: () => {
-        this.aplicarDentistasDaLista(this.usuariosService.obterUsuariosEmCache());
+        this.aplicarDentistasDaLista(
+          this.usuariosService
+            .obterUsuariosEmCache()
+            .filter((usuario) => usuario.tipo_usuario === 'dentista'),
+        );
       },
     });
   }
@@ -740,17 +794,22 @@ export class AgendaComponent implements OnInit {
   private carregarPacientes(): void {
     this.carregandoPacientes.set(true);
 
-    this.agendaService.listarPacientes().subscribe({
-      next: (pacientes) => {
-        this.pacientes.set(pacientes);
-        this.sincronizarPacientePreSelecionado();
-        this.carregandoPacientes.set(false);
-      },
-      error: (error: Error) => {
-        this.carregandoPacientes.set(false);
-        this.toastService.erro(error.message || 'Falha ao carregar pacientes da agenda.');
-      },
-    });
+    this.pacientesService
+      .listarPacientes({ intervalo: obterIntervaloSemanaOperacional() })
+      .subscribe({
+        next: (resposta) => {
+          this.pacientes.set(
+            (resposta.pacientes ?? []).map((paciente) => this.mapearPacienteAgenda(paciente)),
+          );
+          this.pacientesBuscaState.set([]);
+          this.sincronizarPacientePreSelecionado();
+          this.carregandoPacientes.set(false);
+        },
+        error: (error: Error) => {
+          this.carregandoPacientes.set(false);
+          this.toastService.erro(error.message || 'Falha ao carregar pacientes da agenda.');
+        },
+      });
   }
 
   private carregarPacienteDaRota(): void {
@@ -1016,6 +1075,61 @@ export class AgendaComponent implements OnInit {
     const fim = new Date(fimDia.ano, fimDia.mes, fimDia.numero);
 
     return formatarIntervaloDatas(inicio, fim, 'backend');
+  }
+
+  private mapearPacienteAgenda(paciente: PacienteItem): AgendaPaciente {
+    return {
+      id: paciente.id,
+      codigoPaciente: paciente.codigoPaciente,
+      nome: paciente.nome,
+      telefone: paciente.telefone,
+      email: paciente.email,
+      numeroCarteirinha: paciente.numeroCarteirinha,
+    };
+  }
+
+  private configurarBuscaPacientes(): void {
+    this.termoBuscaPacientesSubject
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destruir$))
+      .pipe(
+        switchMap((valor) => {
+          const termoNormalizado = this.normalizar(valor);
+
+          if (termoNormalizado.length < 3) {
+            this.carregandoBuscaPacientes = false;
+            this.pacientesBuscaState.set([]);
+            this.cdr.markForCheck();
+            return of<AgendaPaciente[]>([]);
+          }
+
+          this.carregandoBuscaPacientes = true;
+
+          return this.pacientesService
+            .listarPacientes({ filtros: { busca: termoNormalizado } })
+            .pipe(
+              map((resposta) => {
+                const pacientesMapeados = (resposta.pacientes ?? []).map((paciente) =>
+                  this.mapearPacienteAgenda(paciente),
+                );
+                return pacientesMapeados;
+              }),
+              catchError((error: Error) => {
+                this.toastService.erro(
+                  error.message || 'Nao foi possivel buscar pacientes no servidor.',
+                );
+                return of<AgendaPaciente[]>([]);
+              }),
+              finalize(() => {
+                this.carregandoBuscaPacientes = false;
+                this.cdr.markForCheck();
+              }),
+            );
+        }),
+      )
+      .subscribe((pacientes) => {
+        this.pacientesBuscaState.set(pacientes);
+        this.cdr.markForCheck();
+      });
   }
 
   private obterCodigoPacientePorId(pacienteId: string): string {

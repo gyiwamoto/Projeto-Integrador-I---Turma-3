@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { PacienteItem, SalvarPacientePayload } from '../interfaces/Paciente';
 import { extrairMensagemErroApi } from '../utils/extrair-mensagem-erro-api';
@@ -48,6 +48,7 @@ interface ListarPacientesOpcoes {
 export class PacientesService {
   private readonly apiUrl = '/api/pacientes';
   private readonly cacheKeyListagem = 'patients:list';
+  private readonly cacheKeyListagemAtiva = 'patients:list:active';
   private readonly ttlPacientesMs = 3 * 60 * 1000;
 
   constructor(
@@ -59,63 +60,119 @@ export class PacientesService {
     return `patient:${id}`;
   }
 
-  private chaveListagem(intervalo?: { dataInicio?: string; dataFim?: string }): string {
-    if (!intervalo?.dataInicio && !intervalo?.dataFim) {
-      return this.cacheKeyListagem;
-    }
-
-    return `${this.cacheKeyListagem}:inicio=${intervalo?.dataInicio ?? ''}:fim=${intervalo?.dataFim ?? ''}`;
+  obterListagemAtiva(): ListarPacientesResponse | undefined {
+    return this.queryCache.getSnapshot<ListarPacientesResponse>(this.cacheKeyListagemAtiva);
   }
 
-  listarPacientes(opcoes: ListarPacientesOpcoes = {}): Observable<ListarPacientesResponse> {
+  salvarListagemAtiva(listagem: ListarPacientesResponse): void {
+    this.queryCache.setSnapshot<ListarPacientesResponse>(
+      this.cacheKeyListagemAtiva,
+      listagem,
+      this.ttlPacientesMs,
+    );
+  }
+
+  private chaveListagem(
+    intervalo?: { dataInicio?: string; dataFim?: string },
+    filtros?: Record<string, string>,
+  ): string {
+    const temFiltros = filtros && Object.values(filtros).some((v) => v?.trim());
+
+    if (temFiltros) {
+      const chavesFiltros = Object.entries(filtros ?? {})
+        .filter(([, v]) => v?.trim())
+        .map(([k, v]) => `${k}=${v?.trim()}`)
+        .sort()
+        .join('|');
+      return `${this.cacheKeyListagem}:filtros=${chavesFiltros}`;
+    }
+
+    if (intervalo?.dataInicio || intervalo?.dataFim) {
+      return `${this.cacheKeyListagem}:inicio=${intervalo?.dataInicio ?? ''}:fim=${intervalo?.dataFim ?? ''}`;
+    }
+
+    return this.cacheKeyListagem;
+  }
+
+  listarPacientes(
+    opcoes: ListarPacientesOpcoes & { filtros?: Record<string, string> } = {},
+  ): Observable<ListarPacientesResponse> {
     const forcarAtualizacao = Boolean(opcoes.forcarAtualizacao);
+    const filtros = opcoes.filtros ?? {};
+
+    const temFiltros = Object.values(filtros).some((v) => v?.trim());
+
+    const intervaloParaBackend = temFiltros ? undefined : opcoes.intervalo;
+
+    const chaveCache = this.chaveListagem(intervaloParaBackend, filtros);
+
+    if (!forcarAtualizacao) {
+      const cached = this.queryCache.getSnapshot<ListarPacientesResponse>(chaveCache);
+      if (cached) {
+        return new Observable((observer) => {
+          observer.next(cached);
+          observer.complete();
+        });
+      }
+    }
+
     let params = new HttpParams();
 
-    if (opcoes.intervalo?.dataInicio) {
-      params = params.set('data_inicio', opcoes.intervalo.dataInicio);
+    if (!temFiltros) {
+      if (intervaloParaBackend?.dataInicio) {
+        params = params.set('data_inicio', intervaloParaBackend.dataInicio);
+      }
+
+      if (intervaloParaBackend?.dataFim) {
+        params = params.set('data_fim', intervaloParaBackend.dataFim);
+      }
     }
 
-    if (opcoes.intervalo?.dataFim) {
-      params = params.set('data_fim', opcoes.intervalo.dataFim);
+    if (filtros['busca']) {
+      params = params.set('busca', filtros['busca']);
+    }
+    if (filtros['convenio_cnpj']) {
+      params = params.set('convenio_cnpj', filtros['convenio_cnpj']);
+    }
+    if (filtros['whatsapp']) {
+      params = params.set('whatsapp', filtros['whatsapp']);
     }
 
-    return this.queryCache.getOrSet(
-      this.chaveListagem(opcoes.intervalo),
-      () =>
-        this.http
-          .get<{
-            total: number;
-            pacientes: PacienteApiItem[];
-          }>(this.apiUrl, { withCredentials: true, params })
-          .pipe(
-            map((resposta) => ({
-              total: resposta.total,
-              pacientes: (resposta.pacientes ?? []).map((item) => this.mapearPaciente(item)),
-            })),
-            tap((resposta) => {
-              for (const paciente of resposta.pacientes) {
-                this.queryCache.setSnapshot<PacienteItem>(
-                  this.chavePaciente(paciente.id),
-                  paciente,
-                  this.ttlPacientesMs,
-                );
-              }
-            }),
-            catchError((error) =>
-              throwError(
-                () =>
-                  new Error(
-                    extrairMensagemErroApi(
-                      error?.error,
-                      'Nao foi possivel processar os pacientes.',
-                    ),
-                  ),
+    return this.http
+      .get<{ total: number; pacientes: PacienteApiItem[] }>(this.apiUrl, {
+        withCredentials: true,
+        params,
+      })
+      .pipe(
+        map((resposta) => ({
+          total: resposta.total,
+          pacientes: (resposta.pacientes ?? []).map((item) => this.mapearPaciente(item)),
+        })),
+        tap((resposta) => {
+          for (const paciente of resposta.pacientes) {
+            this.queryCache.setSnapshot<PacienteItem>(
+              this.chavePaciente(paciente.id),
+              paciente,
+              this.ttlPacientesMs,
+            );
+          }
+          this.queryCache.setSnapshot<ListarPacientesResponse>(
+            chaveCache,
+            resposta,
+            this.ttlPacientesMs,
+          );
+
+          this.salvarListagemAtiva(resposta);
+        }),
+        catchError((error) =>
+          throwError(
+            () =>
+              new Error(
+                extrairMensagemErroApi(error?.error, 'Nao foi possivel processar os pacientes.'),
               ),
-            ),
           ),
-      this.ttlPacientesMs,
-      forcarAtualizacao,
-    );
+        ),
+      );
   }
 
   criarPaciente(payload: SalvarPacientePayload): Observable<SalvarPacienteResponse> {

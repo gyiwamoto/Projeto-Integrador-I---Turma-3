@@ -106,10 +106,12 @@
       <circle cx="11" cy="11" r="8" />
       <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
-    <input type="text" [(ngModel)]="termoBusca" placeholder="Nome, codigo, celular, ID..." />
+    <input type="text" [ngModel]="termoBusca" (ngModelChange)="onTermoBuscaChange($event)"
+      placeholder="Nome, codigo, celular, ID..." />
   </div>
 
   <div class="lista-pacientes">
+    <div *ngIf="carregandoBuscaPacientes" class="sem-resultado">Buscando pacientes...</div>
     <div *ngFor="let p of pacientesFiltrados" class="paciente-item" (click)="selecionarPaciente(p)">
       <div class="paciente-avatar">{{ p.nome[0] }}</div>
       <div class="paciente-info">

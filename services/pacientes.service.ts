@@ -65,6 +65,10 @@ export async function listarPacientes(req: VercelRequest, res: VercelResponse) {
   const dataInicio = dataInicioRaw ? normalizarDataIso(dataInicioRaw) : null;
   const dataFim = dataFimRaw ? normalizarDataIso(dataFimRaw) : null;
 
+  const buscaRaw = typeof req.query.busca === 'string' ? req.query.busca.trim() : '';
+  const convenioCnpjRaw = typeof req.query.convenio_cnpj === 'string' ? req.query.convenio_cnpj.trim() : '';
+  const whatsappRaw = typeof req.query.whatsapp === 'string' ? req.query.whatsapp.trim().toLowerCase() : '';
+
   if (dataInicioRaw && !dataInicio) {
     return res.status(400).json({ erro: 'data_inicio invalida. Use formato DD-MM-YYYY.' });
   }
@@ -77,29 +81,102 @@ export async function listarPacientes(req: VercelRequest, res: VercelResponse) {
   const valores: string[] = [];
   const criterios: string[] = [];
 
-  if (dataInicio || dataFim) {
-    const filtrosConsultas: string[] = [];
+  const temFiltros = Boolean(buscaRaw || convenioCnpjRaw || whatsappRaw);
 
-    if (dataInicio) {
-      filtrosConsultas.push(
-        `(c.data_consulta AT TIME ZONE $${valores.length + 1})::date >= $${valores.length + 2}::date`,
-      );
-      valores.push(timezoneNegocio, dataInicio);
-    }
-
-    if (dataFim) {
-      filtrosConsultas.push(
-        `(c.data_consulta AT TIME ZONE $${valores.length + 1})::date <= $${valores.length + 2}::date`,
-      );
-      valores.push(timezoneNegocio, dataFim);
-    }
-
-    criterios.push(`EXISTS (
-      SELECT 1
-        FROM consultas c
-       WHERE c.paciente_id = p.id
-         AND ${filtrosConsultas.join(' AND ')}
+  if (buscaRaw) {
+    const idx = valores.length + 1;
+    criterios.push(`(
+      LOWER(p.codigo_paciente) LIKE $${idx}
+      OR LOWER(p.nome) LIKE $${idx}
+      OR LOWER(p.numero_carteirinha) LIKE $${idx}
+      OR LOWER(p.telefone) LIKE $${idx}
+      OR LOWER(p.email) LIKE $${idx}
     )`);
+    valores.push(`%${buscaRaw.toLowerCase()}%`);
+  }
+
+  if (convenioCnpjRaw) {
+    criterios.push(`p.convenio_cnpj = $${valores.length + 1}`);
+    valores.push(convenioCnpjRaw);
+  }
+
+  if (whatsappRaw === 'sim' || whatsappRaw === 'não' || whatsappRaw === 'nao') {
+    criterios.push(`p.whatsapp_push = $${valores.length + 1}`);
+    valores.push(whatsappRaw === 'sim' ? 'true' : 'false');
+  }
+
+  if ((dataInicio || dataFim) && !temFiltros) {
+    const filtrosDatas: string[] = [];
+
+   
+    if (dataInicio || dataFim) {
+      const filtrosDataCriacao: string[] = [];
+
+      if (dataInicio) {
+        filtrosDataCriacao.push(
+          `(p.criado_em AT TIME ZONE $${valores.length + 1})::date >= $${valores.length + 2}::date`,
+        );
+        valores.push(timezoneNegocio, dataInicio);
+      }
+
+      if (dataFim) {
+        filtrosDataCriacao.push(
+          `(p.criado_em AT TIME ZONE $${valores.length + 1})::date <= $${valores.length + 2}::date`,
+        );
+        valores.push(timezoneNegocio, dataFim);
+      }
+
+      filtrosDatas.push(`(${filtrosDataCriacao.join(' AND ')})`);
+    }
+
+    if (dataInicio || dataFim) {
+      const filtrosDataAtualizacao: string[] = [];
+
+      if (dataInicio) {
+        filtrosDataAtualizacao.push(
+          `(p.atualizado_em AT TIME ZONE $${valores.length + 1})::date >= $${valores.length + 2}::date`,
+        );
+        valores.push(timezoneNegocio, dataInicio);
+      }
+
+      if (dataFim) {
+        filtrosDataAtualizacao.push(
+          `(p.atualizado_em AT TIME ZONE $${valores.length + 1})::date <= $${valores.length + 2}::date`,
+        );
+        valores.push(timezoneNegocio, dataFim);
+      }
+
+      filtrosDatas.push(`(${filtrosDataAtualizacao.join(' AND ')})`);
+    }
+
+    if (dataInicio || dataFim) {
+      const filtrosConsultas: string[] = [];
+
+      if (dataInicio) {
+        filtrosConsultas.push(
+          `(cs.data_consulta AT TIME ZONE $${valores.length + 1})::date >= $${valores.length + 2}::date`,
+        );
+        valores.push(timezoneNegocio, dataInicio);
+      }
+
+      if (dataFim) {
+        filtrosConsultas.push(
+          `(cs.data_consulta AT TIME ZONE $${valores.length + 1})::date <= $${valores.length + 2}::date`,
+        );
+        valores.push(timezoneNegocio, dataFim);
+      }
+
+      filtrosDatas.push(`EXISTS (
+        SELECT 1
+          FROM consultas cs
+         WHERE cs.paciente_id = p.id
+           AND ${filtrosConsultas.join(' AND ')}
+      )`);
+    }
+
+    if (filtrosDatas.length > 0) {
+      criterios.push(`(${filtrosDatas.join(' OR ')})`);
+    }
   }
 
   const resultado = await pool.query<PacienteListagem>(
@@ -111,11 +188,11 @@ export async function listarPacientes(req: VercelRequest, res: VercelResponse) {
             p.whatsapp_push,
             p.email,
             p.convenio_cnpj,
-            c.nome AS convenio_nome,
+            co.nome AS convenio_nome,
             p.numero_carteirinha,
             p.criado_em
        FROM pacientes p
-       LEFT JOIN convenios c ON c.cnpj = p.convenio_cnpj${criterios.length ? `
+       LEFT JOIN convenios co ON co.cnpj = p.convenio_cnpj${criterios.length ? `
       WHERE ${criterios.join(' AND ')}` : ''}
       ORDER BY p.criado_em DESC`,
     valores,

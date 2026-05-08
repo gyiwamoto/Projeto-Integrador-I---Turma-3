@@ -23,7 +23,12 @@ import { ProcedimentosRealizadosService } from '../../services/procedimentos-rea
 import { ToastService } from '../../services/toast.service';
 import { dentes, faces } from '../../constants/odontograma';
 import { ProcedimentoRealizadoItem } from '../../interfaces/ProcedimentoRealizado';
-import { formatarData, formatarDataHora, formatarIntervaloDatas } from '../../utils/formatar-data';
+import {
+  formatarData,
+  formatarDataHora,
+  formatarIntervaloDatas,
+  obterIntervaloSemanaOperacional,
+} from '../../utils/formatar-data';
 import { formatarStatusConsulta } from '../../utils/enums-status';
 import { formatarTextoCurto } from '../../utils/formatar-texto';
 import { LoadingSkeleton } from '../../components/loading-skeleton/loading-skeleton';
@@ -129,29 +134,7 @@ export class PacientesComponent implements OnInit {
     },
   ];
 
-  get camposFiltro(): FiltroCampo[] {
-    return [
-      {
-        key: 'busca',
-        label: 'Busca',
-        type: 'text',
-        placeholder: 'Codigo, nome, telefone, email ou carteirinha',
-      },
-      {
-        key: 'convenio_cnpj',
-        label: 'Convenio',
-        type: 'select',
-        options: this.convenios
-          .filter(
-            (convenio) =>
-              convenio.ativo &&
-              typeof convenio.cnpj === 'string' &&
-              convenio.cnpj.trim().length > 0,
-          )
-          .map((convenio) => ({ label: convenio.nome, value: convenio.cnpj!.trim() })),
-      },
-    ];
-  }
+  camposFiltro: FiltroCampo[] = this.criarCamposFiltro();
 
   get acoesFiltro(): FiltroAcao[] {
     return [
@@ -179,7 +162,7 @@ export class PacientesComponent implements OnInit {
 
   readonly pacientesFiltradosSignal = computed(() => {
     const termo = (this.filtrosState()['busca'] ?? '').trim().toLowerCase();
-    const convenioId = (this.filtrosState()['convenio_cnpj'] ?? '').trim();
+    const convenioCnpj = (this.filtrosState()['convenio_cnpj'] ?? '').trim();
     const whatsapp = (this.filtrosState()['whatsapp'] ?? '').trim().toLowerCase();
 
     return this.pacientesState().filter((paciente) => {
@@ -196,7 +179,7 @@ export class PacientesComponent implements OnInit {
           .toLowerCase()
           .includes(termo);
 
-      const passouConvenio = !convenioId || paciente.convenioId === convenioId;
+      const passouConvenio = !convenioCnpj || paciente.convenioId === convenioCnpj;
       const statusWhatsapp = paciente.whatsappPush ? 'sim' : 'nao';
       const passouWhatsapp = !whatsapp || statusWhatsapp === whatsapp;
 
@@ -245,7 +228,15 @@ export class PacientesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.carregarPacientes(this.obterIntervaloInicialSemanaOperacional());
+    const listagemAtiva = this.pacientesService.obterListagemAtiva();
+    if (listagemAtiva) {
+      this.pacientes = listagemAtiva.pacientes ?? [];
+      this.cdr.markForCheck();
+    } else {
+      this.carregarPacientes(obterIntervaloSemanaOperacional());
+    }
+
+    this.carregarConvenios();
 
     if (this.route.snapshot.queryParamMap.get('novo') === '1') {
       this.abrirNovoPaciente();
@@ -263,6 +254,40 @@ export class PacientesComponent implements OnInit {
 
   onFiltrosChange(filtros: Record<string, string>): void {
     this.filtros = filtros;
+
+    const algumFiltro = Object.values(filtros).some((v) => v?.trim() !== '');
+
+    if (!algumFiltro) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const localFiltrados = this.pacientesFiltradosSignal();
+    if (localFiltrados.length > 0) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.carregando = true;
+    this.pacientesService.listarPacientes({ forcarAtualizacao: false, filtros }).subscribe({
+      next: (resposta) => {
+        const novos = resposta?.pacientes ?? [];
+        const idsExistentes = new Set(this.pacientes.map((p) => p.id));
+        const semDuplicatas = novos.filter((p) => !idsExistentes.has(p.id));
+        this.pacientes = [...this.pacientes, ...semDuplicatas];
+        this.pacientesService.salvarListagemAtiva({
+          total: this.pacientes.length,
+          pacientes: this.pacientes,
+        });
+        this.carregando = false;
+        this.cdr.markForCheck();
+      },
+      error: (error: Error) => {
+        this.carregando = false;
+        this.toastService.erro(error.message || 'Nao foi possivel buscar pacientes no servidor.');
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   onAcaoFiltro(id: string): void {
@@ -412,7 +437,7 @@ export class PacientesComponent implements OnInit {
         this.excluindo = false;
         this.toastService.sucesso(resposta.mensagem);
         this.fecharModalExclusao();
-        this.carregarPacientes();
+        this.recarregarAposAlteracao();
       },
       error: (error: Error) => {
         this.excluindo = false;
@@ -534,6 +559,10 @@ export class PacientesComponent implements OnInit {
     this.pacientesService.listarPacientes({ intervalo }).subscribe({
       next: (resposta) => {
         this.pacientes = resposta?.pacientes ?? [];
+        this.pacientesService.salvarListagemAtiva({
+          total: this.pacientes.length,
+          pacientes: this.pacientes,
+        });
         this.carregando = false;
         this.cdr.markForCheck();
       },
@@ -545,32 +574,50 @@ export class PacientesComponent implements OnInit {
     });
   }
 
-  private obterIntervaloInicialSemanaOperacional(): { dataInicio: string; dataFim: string } {
-    const hoje = new Date();
-    const inicio = new Date(hoje);
-    inicio.setDate(inicio.getDate() - 1);
-
-    const fim = new Date(hoje);
-    fim.setDate(fim.getDate() + 6);
-
-    return {
-      ...formatarIntervaloDatas(inicio, fim, 'backend'),
-    };
+  // Centraliza o reload pós-mutação mantendo o mesmo intervalo da carga inicial
+  private recarregarAposAlteracao(): void {
+    this.carregarPacientes(obterIntervaloSemanaOperacional());
   }
 
   private carregarConvenios(): void {
     this.conveniosService.listarConvenios().subscribe({
       next: (resposta) => {
         this.convenios = resposta.convenios;
+        this.camposFiltro = this.criarCamposFiltro(resposta.convenios);
         this.conveniosCarregados = true;
         this.cdr.markForCheck();
       },
       error: () => {
         this.convenios = [];
+        this.camposFiltro = this.criarCamposFiltro([]);
         this.conveniosCarregados = true;
         this.cdr.markForCheck();
       },
     });
+  }
+
+  private criarCamposFiltro(convenios: ConvenioItem[] = []): FiltroCampo[] {
+    return [
+      {
+        key: 'busca',
+        label: 'Busca',
+        type: 'text',
+        placeholder: 'Codigo, nome, telefone, email ou carteirinha',
+      },
+      {
+        key: 'convenio_cnpj',
+        label: 'Convenio',
+        type: 'select',
+        options: convenios
+          .filter(
+            (convenio) =>
+              convenio.ativo &&
+              typeof convenio.cnpj === 'string' &&
+              convenio.cnpj.trim().length > 0,
+          )
+          .map((convenio) => ({ label: convenio.nome, value: convenio.cnpj!.trim() })),
+      },
+    ];
   }
 
   private criarPaciente(payload: SalvarPacientePayload): void {
@@ -581,7 +628,7 @@ export class PacientesComponent implements OnInit {
         this.salvando = false;
         this.toastService.sucesso(resposta.mensagem);
         this.fecharPacienteModal();
-        this.carregarPacientes();
+        this.recarregarAposAlteracao();
       },
       error: (error: Error) => {
         this.salvando = false;
@@ -598,7 +645,7 @@ export class PacientesComponent implements OnInit {
         this.salvando = false;
         this.toastService.sucesso(resposta.mensagem);
         this.fecharPacienteModal();
-        this.carregarPacientes();
+        this.recarregarAposAlteracao();
       },
       error: (error: Error) => {
         this.salvando = false;

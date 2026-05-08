@@ -142,3 +142,25 @@ export function obterDataAtualIso(): string {
 export function formatarParaChaveIntervalo(data: Date): string {
   return formatarData(data, 'backend');
 }
+
+export interface IntervaloSemanaOperacional {
+  dataInicio: string;
+  dataFim: string;
+  inicioInput: string;
+  fimInput: string;
+}
+
+export function obterIntervaloSemanaOperacional(): IntervaloSemanaOperacional {
+  const hoje = new Date();
+  const inicio = new Date(hoje);
+  inicio.setDate(inicio.getDate() - 1);
+
+  const fim = new Date(hoje);
+  fim.setDate(fim.getDate() + 6);
+
+  return {
+    ...formatarIntervaloDatas(inicio, fim, 'backend'),
+    inicioInput: formatarData(inicio, 'input'),
+    fimInput: formatarData(fim, 'input'),
+  };
+}

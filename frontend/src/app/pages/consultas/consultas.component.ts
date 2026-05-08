@@ -20,7 +20,12 @@ import { AuthService } from '../../services/auth.service';
 import { ConveniosService } from '../../services/convenios.service';
 import { ProcedimentosRealizadosService } from '../../services/procedimentos-realizados.service';
 import { ToastService } from '../../services/toast.service';
-import { formatarData, formatarDataHora, formatarIntervaloDatas } from '../../utils/formatar-data';
+import {
+  formatarData,
+  formatarDataHora,
+  formatarIntervaloDatas,
+  obterIntervaloSemanaOperacional,
+} from '../../utils/formatar-data';
 import { formatarStatusConsulta } from '../../utils/enums-status';
 
 interface ConsultaLinha extends TabelaLinha {
@@ -231,7 +236,7 @@ export class ConsultasComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const intervaloInicial = this.obterIntervaloInicialSemanaOperacional();
+    const intervaloInicial = obterIntervaloSemanaOperacional();
     this.filtros = {
       ...(this.filtros ?? {}),
       inicio: intervaloInicial.inicioInput,
@@ -568,26 +573,6 @@ export class ConsultasComponent implements OnInit {
       status: formatarStatusConsulta(consulta.status),
       observacoes: consulta.observacoes ?? '',
     }));
-  }
-
-  private obterIntervaloInicialSemanaOperacional(): {
-    dataInicio: string;
-    dataFim: string;
-    inicioInput: string;
-    fimInput: string;
-  } {
-    const hoje = new Date();
-    const inicio = new Date(hoje);
-    inicio.setDate(inicio.getDate() - 1);
-
-    const fim = new Date(hoje);
-    fim.setDate(fim.getDate() + 6);
-
-    return {
-      ...formatarIntervaloDatas(inicio, fim, 'backend'),
-      inicioInput: formatarData(inicio, 'input'),
-      fimInput: formatarData(fim, 'input'),
-    };
   }
 
   private extrairIntervaloDosFiltros(filtros: Record<string, string>): {
